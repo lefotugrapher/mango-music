@@ -2,32 +2,29 @@ import '@testing-library/jest-dom/vitest';
 import { afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
+// jsdom has no layout engine and lacks these browser APIs.
+const defaultMatchMedia = (query: string): MediaQueryList =>
+  ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener() {},
+    removeEventListener() {},
+    addListener() {},
+    removeListener() {},
+    dispatchEvent: () => false,
+  }) as MediaQueryList;
+
+Object.defineProperty(window, 'matchMedia', { writable: true, configurable: true, value: defaultMatchMedia });
+
 afterEach(() => {
   cleanup();
   localStorage.clear();
   sessionStorage.clear();
   document.documentElement.removeAttribute('data-theme');
   document.documentElement.removeAttribute('data-reduce-motion');
+  window.matchMedia = defaultMatchMedia;
 });
-
-// jsdom has no layout engine and lacks these browser APIs.
-if (!window.matchMedia) {
-  Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    configurable: true,
-    value: (query: string): MediaQueryList =>
-      ({
-        matches: false,
-        media: query,
-        onchange: null,
-        addEventListener() {},
-        removeEventListener() {},
-        addListener() {},
-        removeListener() {},
-        dispatchEvent: () => false,
-      }) as MediaQueryList,
-  });
-}
 
 class NoopObserver {
   observe() {}
