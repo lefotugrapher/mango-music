@@ -16,6 +16,7 @@ describe('settings', () => {
       appearance: 'dark',
       glass: 'auto',
       reduceMotion: true,
+      glassiness: 50,
     });
     expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
     expect(document.documentElement).toHaveAttribute('data-reduce-motion', 'true');
@@ -36,9 +37,25 @@ describe('settings', () => {
 
   it('keeps valid fields and replaces invalid ones', () => {
     localStorage.setItem('pane.settings', JSON.stringify({ appearance: 'neon', glass: 'solid', reduceMotion: 'yes' }));
-    expect(loadSettings()).toEqual({ appearance: 'auto', glass: 'solid', reduceMotion: false });
+    expect(loadSettings()).toEqual({ appearance: 'auto', glass: 'solid', reduceMotion: false, glassiness: 50 });
     localStorage.setItem('pane.settings', JSON.stringify(['dark']));
     expect(loadSettings()).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it('turns glassiness into how opaque the glass is: 0 solid, 100 clearest', () => {
+    useSettings.getState().update({ glassiness: 0 });
+    expect(document.documentElement.style.getPropertyValue('--glass-opacity')).toBe('100%');
+    useSettings.getState().update({ glassiness: 100 });
+    expect(document.documentElement.style.getPropertyValue('--glass-opacity')).toBe('20%');
+    useSettings.getState().update({ glassiness: 50 });
+    expect(document.documentElement.style.getPropertyValue('--glass-opacity')).toBe('60%');
+  });
+
+  it('keeps a stored glassiness within range', () => {
+    localStorage.setItem('pane.settings', JSON.stringify({ glassiness: 250 }));
+    expect(loadSettings().glassiness).toBe(100);
+    localStorage.setItem('pane.settings', JSON.stringify({ glassiness: 'lots' }));
+    expect(loadSettings().glassiness).toBe(50);
   });
 
   it('applySettings is safe to call repeatedly', () => {

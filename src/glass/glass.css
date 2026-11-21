@@ -27,11 +27,22 @@
   inset: 0;
   z-index: -1;
   border-radius: inherit;
-  background: var(--glass-fill-color, var(--glass-fill));
+  /* How see-through the glass is follows Settings > Glassiness. */
+  background: var(
+    --glass-fill-color,
+    color-mix(in srgb, var(--glass-fill-solid) var(--glass-opacity, 60%), transparent)
+  );
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
   box-shadow: var(--glass-shadow);
   pointer-events: none;
+}
+
+.glass[data-material='clear'] .glass__backdrop {
+  background: var(
+    --glass-fill-color,
+    color-mix(in srgb, var(--glass-fill-solid) calc(var(--glass-opacity, 60%) * 0.45), transparent)
+  );
 }
 
 .glass[data-tier='solid'] .glass__backdrop {

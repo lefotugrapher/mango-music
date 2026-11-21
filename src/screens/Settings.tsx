@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { GlassSetting } from '../glass/tier';
 import { useSource } from '../session/hooks';
 import { useSettings, type Appearance } from '../settings/store';
+import { Slider } from '../ui/Slider';
 import { Page } from './shared';
 
 type Props = {
@@ -111,6 +112,23 @@ export function Settings({ mode, onDisconnect, onChangeClientId }: Props) {
             options={GLASS}
             onChange={(glass) => settings.update({ glass })}
           />
+          <div className="settings__field">
+            <span className="settings__legend" aria-hidden="true">
+              Glassiness
+            </span>
+            <div className="settings__slider">
+              <span>Solid</span>
+              <Slider
+                label="Glassiness"
+                value={settings.glassiness}
+                max={100}
+                step={5}
+                formatValue={(v) => (v <= 0 ? 'Solid' : v >= 100 ? 'Clearest' : `${Math.round(v)}% glass`)}
+                onChange={(v) => settings.update({ glassiness: Math.round(v) })}
+              />
+              <span>Glassy</span>
+            </div>
+          </div>
           <p className="settings__hint">
             Best available bends what is behind the glass in Chromium browsers and frosts it elsewhere. Solid turns
             transparency off.

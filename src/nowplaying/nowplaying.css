@@ -156,6 +156,7 @@
   --slider-track: rgba(255, 255, 255, 0.26);
   --slider-fill: #ffffff;
   --glass-fill-clear: rgba(255, 255, 255, 0.14);
+  --glass-fill-solid: #ffffff;
   --glass-rim: rgba(255, 255, 255, 0.35);
   --glass-rim-shade: rgba(255, 255, 255, 0.12);
   --artwork-placeholder: rgba(255, 255, 255, 0.12);

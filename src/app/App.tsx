@@ -86,8 +86,8 @@ export function App({ deps: injected }: { deps?: AppDeps }) {
   const tier = useMemo(() => detectGlassTier(readGlassEnv(glass)), [glass]);
 
   useEffect(() => {
-    const { appearance, glass: g, reduceMotion } = useSettings.getState();
-    applySettings({ appearance, glass: g, reduceMotion });
+    const { appearance, glass: g, reduceMotion, glassiness } = useSettings.getState();
+    applySettings({ appearance, glass: g, reduceMotion, glassiness });
   }, []);
 
   /** Ends the current session, whatever kind it is, and returns to Setup. */

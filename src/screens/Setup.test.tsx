@@ -167,6 +167,17 @@ describe('Settings', () => {
     expect(document.documentElement).toHaveAttribute('data-reduce-motion', 'true');
   });
 
+  it('has a slider from solid to glassy', async () => {
+    renderApp(<Settings mode="demo" onDisconnect={() => {}} onChangeClientId={() => {}} />);
+    const slider = screen.getByRole('slider', { name: 'Glassiness' });
+    expect(slider).toHaveAttribute('aria-valuenow', '50');
+    fireEvent.keyDown(slider, { key: 'End' });
+    expect(useSettings.getState().glassiness).toBe(100);
+    fireEvent.keyDown(slider, { key: 'Home' });
+    expect(useSettings.getState().glassiness).toBe(0);
+    expect(slider).toHaveAttribute('aria-valuetext', 'Solid');
+  });
+
   it('offers only "Exit demo" in the demo', async () => {
     const onDisconnect = vi.fn();
     renderApp(<Settings mode="demo" onDisconnect={onDisconnect} onChangeClientId={() => {}} />);

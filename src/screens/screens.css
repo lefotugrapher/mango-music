@@ -877,3 +877,15 @@
 .setup .btn.setup__secondary {
   white-space: nowrap;
 }
+
+.settings__slider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--fs-body);
+  color: var(--text-secondary);
+}
+
+.settings__slider .slider {
+  flex: 1;
+}
