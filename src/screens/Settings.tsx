@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { browserKind, promptInstall, useInstall } from '../app/install';
 import type { GlassSetting } from '../glass/tier';
 import { useSource } from '../session/hooks';
 import { useSettings, type Appearance } from '../settings/store';
@@ -144,6 +145,8 @@ export function Settings({ mode, onDisconnect, onChangeClientId }: Props) {
         </div>
       </section>
 
+      <InstallSection />
+
       <section className="settings__group" aria-labelledby="settings-about">
         <h2 id="settings-about" className="page__section">
           About
@@ -156,5 +159,47 @@ export function Settings({ mode, onDisconnect, onChangeClientId }: Props) {
         </div>
       </section>
     </Page>
+  );
+}
+
+/** How to put Mango Music in the Dock as its own app. */
+function InstallSection() {
+  const { installed, canPrompt } = useInstall();
+  const kind = browserKind();
+  return (
+    <section className="settings__group" aria-labelledby="settings-install">
+      <h2 id="settings-install" className="page__section">
+        Mac app
+      </h2>
+      <div className="settings__card">
+        {installed ? (
+          <p className="settings__hint">Mango Music is installed. Open it from the Dock, Launchpad or Applications.</p>
+        ) : canPrompt ? (
+          <>
+            <p className="settings__hint">Install Mango Music to open it in its own window from the Dock.</p>
+            <div className="settings__actions">
+              <button type="button" className="btn" onClick={() => void promptInstall()}>
+                Install Mango Music
+              </button>
+            </div>
+          </>
+        ) : kind === 'safari' ? (
+          <p className="settings__hint">
+            In Safari, choose File &gt; Add to Dock. Mango Music then opens in its own window from the Dock and
+            Applications.
+          </p>
+        ) : kind === 'chromium' ? (
+          <p className="settings__hint">
+            Click the install icon at the right of the address bar, or open the browser menu and choose Cast, save and
+            share &gt; Install page as app.
+          </p>
+        ) : (
+          <p className="settings__hint">
+            Open Mango Music in Safari (File &gt; Add to Dock) or Chrome (Install page as app) to install it as a Mac
+            app.
+          </p>
+        )}
+      </div>
+    </section>
   );
 }

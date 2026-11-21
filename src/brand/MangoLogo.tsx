@@ -4,7 +4,7 @@ import './brand.css';
 /**
  * The Mango Music mark: a mango with a bite taken out, a stem and a leaf.
  * It is an original drawing, filled with the current text colour so it sits
- * in a line of type like a letter, or white on the app-icon tile.
+ * in a line of type like a letter, or white on the black app-icon tile.
  */
 export function MangoLogo({ title, className }: { title?: string; className?: string }) {
   // Each copy needs its own mask id: ids are document-wide.

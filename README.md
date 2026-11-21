@@ -81,6 +81,15 @@ Spotify removed or restricted several parts of its Web API for new apps in 2026.
 - Search returns ten results per group at a time; **Show more** loads the next ten.
 - Spotify offers no documented way to say "play my liked songs", so Mango Music starts playback from a list of tracks. Play uses up to 500 songs around where you start. Shuffle draws 500 at random from your first 1,000 liked songs.
 
+## Install it as a Mac app
+
+Mango Music installs like an app, with its own window and a black Mango icon in the Dock.
+
+- **Safari:** open the site and choose **File > Add to Dock**.
+- **Chrome or Edge:** click the install icon in the address bar, or go to **Settings > Mac app > Install Mango Music** inside the app.
+
+Once installed it appears in Launchpad and Applications. The icons are drawn by `scripts/make-icons.mjs` (`node scripts/make-icons.mjs` redraws them).
+
 ## Privacy
 
 Mango Music has no backend and no analytics. Among the permissions it asks Spotify for is your email address; Spotify's in-browser player will not start without that permission, and Mango Music never reads the address. Your Client ID and Spotify tokens are kept in this browser's local storage. Requests go to Spotify (`accounts.spotify.com`, `api.spotify.com`, the Web Playback SDK, and Spotify's image servers) and nowhere else. **Settings → Disconnect Spotify** removes the tokens.
