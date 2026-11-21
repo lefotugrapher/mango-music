@@ -260,3 +260,49 @@
 .tab--solo[aria-current='page'] {
   background: none;
 }
+
+/* ---------- Playback notice ---------- */
+.player-notice {
+  position: fixed;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  z-index: 40;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(560px, calc(100% - 24px));
+  padding: 10px 10px 10px 16px;
+  font-size: var(--fs-body);
+  line-height: 18px;
+}
+
+.shell[data-layout='desktop'] ~ .player-notice {
+  left: calc(var(--sidebar-w) + (100% - var(--sidebar-w)) / 2);
+}
+
+.player-notice__close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+}
+
+.player-notice__close:hover {
+  background: var(--fill-hover);
+  color: var(--text);
+}
+
+.player-notice__close svg {
+  width: 14px;
+  height: 14px;
+}
+
+.app-boot {
+  height: 100%;
+  display: grid;
+  place-items: center;
+}

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
 import { AlbumPage } from '../screens/AlbumPage';
 import { ArtistPage } from '../screens/ArtistPage';
@@ -8,7 +9,8 @@ import { LibrarySection } from '../screens/LibrarySection';
 import { PlaylistPage } from '../screens/PlaylistPage';
 import { Search } from '../screens/Search';
 
-export function AppRoutes() {
+/** `settings` is passed in because it needs the app's disconnect handlers. */
+export function AppRoutes({ settings }: { settings: ReactNode }) {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
@@ -18,6 +20,7 @@ export function AppRoutes() {
       <Route path="/album/:id" element={<AlbumPage />} />
       <Route path="/playlist/:id" element={<PlaylistPage />} />
       <Route path="/artist/:id" element={<ArtistPage />} />
+      <Route path="/settings" element={settings} />
       {import.meta.env.DEV && <Route path="/__glass" element={<GlassLab />} />}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
