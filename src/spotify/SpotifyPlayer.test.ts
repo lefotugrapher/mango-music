@@ -123,7 +123,7 @@ describe('construction and ready', () => {
     ]);
   });
 
-  it('records an auth error if the token cannot be fetched', async () => {
+  it('reports a connection problem, not an expired sign-in, if the token cannot be fetched', async () => {
     const bad = createSpotifyPlayer({
       sdk: { Player: class { constructor(o: SdkPlayerOptions) { setTimeout(() => o.getOAuthToken(() => {}), 0); } connect = async () => true; addListener() {} removeListener() {} disconnect() {} } as unknown as SpotifyNamespace['Player'] },
       client: t.client,
@@ -132,7 +132,12 @@ describe('construction and ready', () => {
       },
     });
     await t.flush();
-    expect(bad.getState().error).toEqual({ kind: 'auth', message: 'Spotify sign-in expired. Connect again.' });
+    // A revoked sign-in is handled by the token store, which ends the session.
+    // Anything else here is transient and must not claim the sign-in expired.
+    expect(bad.getState().error).toEqual({
+      kind: 'playback',
+      message: "Pane couldn't reach Spotify to start the player. Check your connection.",
+    });
     bad.dispose();
   });
 });
@@ -250,11 +255,24 @@ describe('SDK errors', () => {
   it.each([
     ['account_error', 'premium_required', 'Playback needs Spotify Premium. You can still browse.'],
     ['initialization_error', 'unsupported_browser', "This browser can't play protected audio. Pick another device, or open Pane in Chrome."],
-    ['authentication_error', 'auth', 'Spotify sign-in expired. Connect again.'],
+    ['authentication_error', 'auth', "Spotify wouldn't start the player with this sign-in (raw). Reconnect to fix it."],
   ] as const)('%s -> %s', async (event, kind, message) => {
     await t.emit(event, { message: 'raw' });
     expect(p.getState().error).toEqual({ kind, message });
     expect(p.getState().status).toBe('idle');
+  });
+
+  it('clears a player sign-in problem once the player does connect', async () => {
+    await t.emit('authentication_error', { message: 'raw' });
+    expect(p.getState().error?.kind).toBe('auth');
+    await ready();
+    expect(p.getState().error).toBeNull();
+  });
+
+  it('keeps a Premium or browser problem on show even after ready', async () => {
+    await t.emit('account_error', { message: 'raw' });
+    await ready();
+    expect(p.getState().error?.kind).toBe('premium_required');
   });
 
   it('playback_error keeps the SDK message', async () => {

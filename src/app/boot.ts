@@ -13,7 +13,14 @@ export function withoutAuthParams(url: URL): string {
   return clean.href;
 }
 
-export type NoticeReason = 'denied' | 'state_mismatch' | 'exchange_failed' | 'signed_out' | 'forbidden' | 'start_failed';
+export type NoticeReason =
+  | 'denied'
+  | 'state_mismatch'
+  | 'exchange_failed'
+  | 'signed_out'
+  | 'forbidden'
+  | 'start_failed'
+  | 'needs_consent';
 
 const NOTICES: Record<NoticeReason, string> = {
   denied: 'Spotify sign-in was cancelled.',
@@ -23,6 +30,7 @@ const NOTICES: Record<NoticeReason, string> = {
   forbidden:
     "This Spotify account isn't on the app's user list. Add it under User Management in the Spotify dashboard.",
   start_failed: "Pane couldn't start Spotify. Try connecting again.",
+  needs_consent: 'Pane needs one more permission from Spotify to play music here. Continue with Spotify to grant it.',
 };
 
 export const noticeFor = (reason: NoticeReason): string => NOTICES[reason];

@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HashRouter } from 'react-router';
 import { configuredClientId, resolveClientId } from '../auth/clientId';
 import { redirectUriFor } from '../auth/redirect';
-import { beginLogin, completeLogin, type LoginResult } from '../auth/spotifyAuth';
+import { beginLogin, completeLogin, needsNewConsent, readStoredTokens, type LoginResult } from '../auth/spotifyAuth';
 import { createDemoPlayer } from '../demo/DemoPlayer';
 import { createDemoSource } from '../demo/DemoSource';
 import { createDemoLibrary } from '../demo/library';
@@ -148,7 +148,8 @@ export function App({ deps: injected }: { deps?: AppDeps }) {
     booted.current = true;
     const url = new URL(deps.location.href);
     const id = resolveClientId({ builtIn: deps.builtInClientId, stored: storedClientId() })?.id ?? null;
-    const action = decideBoot({ url, clientId: id, hasTokens: readJSON<unknown>(TOKENS_KEY, null) !== null });
+    const tokens = readStoredTokens();
+    const action = decideBoot({ url, clientId: id, hasTokens: tokens !== null });
 
     void (async () => {
       if (action === 'setup') {
@@ -156,6 +157,14 @@ export function App({ deps: injected }: { deps?: AppDeps }) {
         return;
       }
       if (action === 'restore') {
+        if (needsNewConsent(tokens)) {
+          // The stored grant is missing a permission the player needs, and a
+          // refresh cannot add one. Starting anyway would give a library that
+          // loads and a player that Spotify refuses.
+          removeKey(TOKENS_KEY);
+          setPhase({ name: 'setup', notice: noticeFor('needs_consent') });
+          return;
+        }
         await startSpotify(id!);
         return;
       }
@@ -236,7 +245,7 @@ export function App({ deps: injected }: { deps?: AppDeps }) {
                   }
                 />
               </AppShell>
-              <PlayerNotice />
+              <PlayerNotice onReconnect={known ? () => connect(known.id) : undefined} />
               <NowPlayingSheet open={nowPlayingOpen} onClose={closeNowPlaying} />
             </SessionProvider>
           </HashRouter>

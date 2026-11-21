@@ -12,7 +12,11 @@ export class AuthError extends Error {
 }
 
 export const SCOPES: readonly string[] = [
+  // The in-browser player (Web Playback SDK) refuses a token that lacks any of
+  // these three, with an authentication error, even though the Web API itself
+  // is happy without the email one. Pane never reads the email address.
   'streaming',
+  'user-read-email',
   'user-read-private',
   'user-read-playback-state',
   'user-modify-playback-state',
@@ -94,11 +98,31 @@ function isTokens(v: unknown): v is Tokens {
     t.accessToken !== '' &&
     typeof t.refreshToken === 'string' &&
     typeof t.expiresAt === 'number' &&
-    Number.isFinite(t.expiresAt)
+    Number.isFinite(t.expiresAt) &&
+    (t.scope === undefined || typeof t.scope === 'string')
   );
 }
 
-type TokenResponse = { access_token: string; refresh_token?: string; expires_in: number };
+/** The tokens in storage, or null when there are none or they are malformed. */
+export function readStoredTokens(): Tokens | null {
+  const v = readJSON<unknown>(TOKENS_KEY, null);
+  return isTokens(v) ? v : null;
+}
+
+/**
+ * True when someone is signed in but their grant does not cover everything
+ * Pane asks for today: a permission was added since they signed in, or the
+ * grant predates Pane recording it. Refreshing cannot widen a grant, so they
+ * have to go through Spotify's consent screen once more.
+ */
+export function needsNewConsent(tokens: Tokens | null): boolean {
+  if (!tokens) return false;
+  if (tokens.scope === undefined) return true;
+  const granted = new Set(tokens.scope.split(/\s+/).filter(Boolean));
+  return SCOPES.some((scope) => !granted.has(scope));
+}
+
+type TokenResponse = { access_token: string; refresh_token?: string; expires_in: number; scope?: string };
 
 function parseTokenResponse(v: unknown): TokenResponse | null {
   if (typeof v !== 'object' || v === null) return null;
@@ -106,7 +130,8 @@ function parseTokenResponse(v: unknown): TokenResponse | null {
   if (typeof r.access_token !== 'string' || r.access_token === '') return null;
   if (typeof r.expires_in !== 'number' || !Number.isFinite(r.expires_in)) return null;
   const refresh = typeof r.refresh_token === 'string' && r.refresh_token !== '' ? r.refresh_token : undefined;
-  return { access_token: r.access_token, refresh_token: refresh, expires_in: r.expires_in };
+  const scope = typeof r.scope === 'string' ? r.scope : undefined;
+  return { access_token: r.access_token, refresh_token: refresh, expires_in: r.expires_in, scope };
 }
 
 function postForm(fetchFn: typeof fetch, body: Record<string, string>): Promise<Response> {
@@ -155,6 +180,9 @@ export async function completeLogin(
       accessToken: parsed.access_token,
       refreshToken: parsed.refresh_token,
       expiresAt: now() + parsed.expires_in * 1000,
+      // Recorded so a later version of Pane can tell whether this grant
+      // covers a permission it has since started asking for.
+      scope: parsed.scope,
     } satisfies Tokens);
     return { ok: true };
   } catch {
@@ -187,10 +215,7 @@ export function createTokenStore(deps: {
     return run;
   }
 
-  function get(): Tokens | null {
-    const v = readJSON<unknown>(TOKENS_KEY, null);
-    return isTokens(v) ? v : null;
-  }
+  const get = readStoredTokens;
 
   function notifySignedOut() {
     for (const cb of [...listeners]) cb();
@@ -266,6 +291,8 @@ export function createTokenStore(deps: {
         accessToken: parsed.access_token,
         refreshToken: parsed.refresh_token ?? current.refreshToken,
         expiresAt: now() + parsed.expires_in * 1000,
+        // A refresh often omits the scope; the grant itself has not changed.
+        scope: parsed.scope ?? current.scope,
       };
       writeJSON(TOKENS_KEY, next);
       return next.accessToken;

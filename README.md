@@ -77,7 +77,7 @@ Spotify removed or restricted several parts of its Web API for new apps in 2026.
 
 ## Privacy
 
-Pane has no backend and no analytics. Your Client ID and Spotify tokens are kept in this browser's local storage. Requests go to Spotify (`accounts.spotify.com`, `api.spotify.com`, the Web Playback SDK, and Spotify's image servers) and nowhere else. **Settings → Disconnect Spotify** removes the tokens.
+Pane has no backend and no analytics. Among the permissions it asks Spotify for is your email address; Spotify's in-browser player will not start without that permission, and Pane never reads the address. Your Client ID and Spotify tokens are kept in this browser's local storage. Requests go to Spotify (`accounts.spotify.com`, `api.spotify.com`, the Web Playback SDK, and Spotify's image servers) and nowhere else. **Settings → Disconnect Spotify** removes the tokens.
 
 ## Hosting it
 

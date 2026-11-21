@@ -28,7 +28,8 @@ export interface SpotifyClient {
   del(path: string, body?: unknown, params?: Params): Promise<void>;
 }
 
-export type Tokens = { accessToken: string; refreshToken: string; expiresAt: number };
+/** scope is the space-separated list of permissions Spotify granted with these tokens. */
+export type Tokens = { accessToken: string; refreshToken: string; expiresAt: number; scope?: string };
 
 export interface TokenStore {
   get(): Tokens | null;

@@ -252,6 +252,12 @@ and artist pages.
   still ships no Client ID, so the anti-goal holds; a copy configured this way
   is limited to five allowlisted accounts.
 
+- **One more scope: `user-read-email`.** Spotify's in-browser player refuses a
+  token without it (its how-to lists `streaming`, `user-read-email`,
+  `user-read-private`), reporting an authentication error. Pane requests it
+  and never reads the address. Granted scopes are stored with the tokens, so
+  a sign-in from before a scope was added is sent through consent again.
+
 ## Left to the builder
 
 Icon set, component breakdown, animation curves, cache storage, test tooling,

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { LoginResult } from '../auth/spotifyAuth';
+import { SCOPES, type LoginResult } from '../auth/spotifyAuth';
 import type { PlayerError, PlayerState } from '../domain/types';
 import { DEFAULT_SETTINGS, useSettings } from '../settings/store';
 import { SpotifyError } from '../spotify/contract';
@@ -11,6 +11,7 @@ import type { SpotifySession } from '../session/spotifySession';
 
 const VALID_ID = '0123456789abcdef0123456789abcdef';
 const ROOT = 'http://127.0.0.1:5173/';
+const STORED_TOKENS = { accessToken: 'a', refreshToken: 'r', expiresAt: 1, scope: SCOPES.join(' ') };
 
 function fakeSpotifySession() {
   const demo = makeDemoSession();
@@ -47,7 +48,7 @@ function deps(overrides: Partial<AppDeps> & { href?: string } = {}): AppDeps {
 
 const remember = (tokens = true) => {
   localStorage.setItem('pane.clientId', JSON.stringify(VALID_ID));
-  if (tokens) localStorage.setItem('pane.tokens', JSON.stringify({ accessToken: 'a', refreshToken: 'r', expiresAt: 1 }));
+  if (tokens) localStorage.setItem('pane.tokens', JSON.stringify(STORED_TOKENS));
 };
 
 beforeEach(() => {
@@ -70,7 +71,7 @@ describe('App', () => {
   });
 
   it('restores a session that was started with the built-in Client ID', async () => {
-    localStorage.setItem('pane.tokens', JSON.stringify({ accessToken: 'a', refreshToken: 'r', expiresAt: 1 }));
+    localStorage.setItem('pane.tokens', JSON.stringify(STORED_TOKENS));
     const d = deps({ builtInClientId: VALID_ID });
     render(<App deps={d} />);
     expect(await screen.findByRole('heading', { name: 'Home' })).toBeInTheDocument();
@@ -135,6 +136,32 @@ describe('App', () => {
     expect(d.beginLogin).toHaveBeenCalledWith(VALID_ID, ROOT);
   });
 
+  it('asks for consent again when the stored sign-in lacks a permission Pane now needs', async () => {
+    localStorage.setItem('pane.clientId', JSON.stringify(VALID_ID));
+    // Tokens from before Pane asked for user-read-email: the API works, the player does not.
+    localStorage.setItem('pane.tokens', JSON.stringify({ accessToken: 'a', refreshToken: 'r', expiresAt: 1 }));
+    const d = deps();
+    render(<App deps={d} />);
+    expect(
+      await screen.findByText('Pane needs one more permission from Spotify to play music here. Continue with Spotify to grant it.'),
+    ).toHaveAttribute('role', 'status');
+    expect(d.createSpotifySession).not.toHaveBeenCalled();
+    expect(localStorage.getItem('pane.tokens')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Continue with Spotify' }));
+    expect(d.beginLogin).toHaveBeenCalledWith(VALID_ID, ROOT);
+  });
+
+  it('offers to reconnect right from the notice when the player rejects the sign-in', async () => {
+    remember();
+    const fake = fakeSpotifySession();
+    const error: PlayerError = { kind: 'auth', message: "Spotify wouldn't start the player with this sign-in. Reconnect to fix it." };
+    vi.spyOn(fake.session.player, 'getState').mockReturnValue({ ...fake.session.player.getState(), error });
+    const d = deps({ createSpotifySession: vi.fn(async () => fake.session) });
+    render(<App deps={d} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Reconnect' }));
+    expect(d.beginLogin).toHaveBeenCalledWith(VALID_ID, ROOT);
+  });
+
   it('restores a stored session straight into Home', async () => {
     remember();
     const d = deps();
@@ -190,7 +217,7 @@ describe('App', () => {
   });
 
   it('opens the Client ID form when changing it even though a built-in one exists', async () => {
-    localStorage.setItem('pane.tokens', JSON.stringify({ accessToken: 'a', refreshToken: 'r', expiresAt: 1 }));
+    localStorage.setItem('pane.tokens', JSON.stringify(STORED_TOKENS));
     const fake = fakeSpotifySession();
     render(<App deps={deps({ builtInClientId: VALID_ID, createSpotifySession: vi.fn(async () => fake.session) })} />);
     await userEvent.click(await screen.findByRole('link', { name: 'Settings' }));

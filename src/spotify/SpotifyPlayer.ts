@@ -11,8 +11,12 @@ const REMOTE_VOLUME_DELAY_MS = 300;
 const MESSAGES = {
   premium_required: 'Playback needs Spotify Premium. You can still browse.',
   unsupported_browser: "This browser can't play protected audio. Pick another device, or open Pane in Chrome.",
-  auth: 'Spotify sign-in expired. Connect again.',
+  token: "Pane couldn't reach Spotify to start the player. Check your connection.",
 } as const;
+
+/** The SDK says why it refused a token (a missing permission, usually). Pass that on. */
+const authRefused = (detail?: string) =>
+  `Spotify wouldn't start the player with this sign-in${detail ? ` (${detail})` : ''}. Reconnect to fix it.`;
 
 const REPEAT_BY_SDK: RepeatMode[] = ['off', 'context', 'track'];
 
@@ -151,7 +155,9 @@ export function createSpotifyPlayer(deps: {
     name: DEVICE_NAME,
     volume: state.volume,
     getOAuthToken: (cb) => {
-      deps.getToken().then(cb, () => setError({ kind: 'auth', message: MESSAGES.auth }));
+      // A sign-in that Spotify has revoked ends the whole session through the
+      // token store. What is left here is a transient failure to fetch a token.
+      deps.getToken().then(cb, () => setError({ kind: 'playback', message: MESSAGES.token }));
     },
   });
 
@@ -162,7 +168,14 @@ export function createSpotifyPlayer(deps: {
 
   on('ready', ({ device_id }) => {
     deviceId = device_id;
-    commit({ status: state.status === 'loading' ? 'idle' : state.status, devices: mapDevices() });
+    // Connected after all: a sign-in or connection complaint no longer applies.
+    // Premium and browser limits are facts about the account and stay on show.
+    const stale = state.error?.kind === 'auth' || state.error?.kind === 'playback';
+    commit({
+      status: state.status === 'loading' ? 'idle' : state.status,
+      devices: mapDevices(),
+      ...(stale ? { error: null } : {}),
+    });
     void cmd(() => client.put('/me/player', { device_ids: [device_id], play: false }));
   });
   on('not_ready', () => {
@@ -190,7 +203,7 @@ export function createSpotifyPlayer(deps: {
     startPolling();
   });
   on('account_error', () => setError({ kind: 'premium_required', message: MESSAGES.premium_required }));
-  on('authentication_error', () => setError({ kind: 'auth', message: MESSAGES.auth }));
+  on('authentication_error', (e) => setError({ kind: 'auth', message: authRefused(e?.message) }));
   on('playback_error', ({ message }) => setError({ kind: 'playback', message }));
 
   sdkPlayer.connect().then(

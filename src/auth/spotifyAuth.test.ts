@@ -6,6 +6,7 @@ import {
   buildAuthorizeUrl,
   completeLogin,
   createTokenStore,
+  needsNewConsent,
 } from './spotifyAuth';
 
 const NOW = 1_000_000;
@@ -41,9 +42,11 @@ describe('buildAuthorizeUrl', () => {
     expect(u.searchParams.get('scope')).toBe(SCOPES.join(' '));
   });
 
-  it('lists the scopes from the global constraints', () => {
+  it('asks for exactly these permissions and no others', () => {
+    // The plan's list plus user-read-email, which the in-browser player
+    // turned out to require. Adding a scope here forces everyone to consent again.
     expect(SCOPES.join(' ')).toBe(
-      'streaming user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-library-modify user-top-read user-read-recently-played playlist-read-private playlist-read-collaborative user-follow-read',
+      'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-read user-library-modify user-top-read user-read-recently-played playlist-read-private playlist-read-collaborative user-follow-read',
     );
   });
 });
@@ -329,5 +332,63 @@ describe('createTokenStore when another tab signs out', () => {
     unsubscribe();
     removedElsewhere();
     expect(signedOut).not.toHaveBeenCalled();
+  });
+});
+
+describe('scopes', () => {
+  it("asks for every permission Spotify's in-browser player requires", () => {
+    // Without user-read-email the Web Playback SDK refuses the token with an
+    // authentication error, even though the Web API accepts it.
+    expect(SCOPES).toEqual(expect.arrayContaining(['streaming', 'user-read-email', 'user-read-private']));
+  });
+
+  it('remembers which permissions Spotify granted', async () => {
+    seedPkce();
+    const fetch = vi.fn(async () =>
+      json({ access_token: 'A', refresh_token: 'R', expires_in: 3600, scope: 'streaming user-read-email' }),
+    );
+    await completeLogin(new URL('http://127.0.0.1:5173/?code=c&state=st'), {
+      fetch: fetch as unknown as typeof globalThis.fetch,
+      now,
+    });
+    expect(JSON.parse(localStorage.getItem('pane.tokens')!).scope).toBe('streaming user-read-email');
+  });
+
+  it('keeps the granted permissions across a refresh that does not repeat them', async () => {
+    seedTokens({ accessToken: 'A', refreshToken: 'R', expiresAt: NOW, scope: 'streaming' } as never);
+    const fetch = vi.fn(async () => json({ access_token: 'B', expires_in: 3600 }));
+    const store = createTokenStore({ clientId: 'cid', now, locks: null, fetch: fetch as unknown as typeof globalThis.fetch });
+    await store.getAccessToken();
+    expect(store.get()).toMatchObject({ accessToken: 'B', scope: 'streaming' });
+  });
+
+  it('takes the permissions from a refresh that does report them', async () => {
+    seedTokens({ accessToken: 'A', refreshToken: 'R', expiresAt: NOW, scope: 'streaming' } as never);
+    const fetch = vi.fn(async () => json({ access_token: 'B', expires_in: 3600, scope: 'streaming user-read-email' }));
+    const store = createTokenStore({ clientId: 'cid', now, locks: null, fetch: fetch as unknown as typeof globalThis.fetch });
+    await store.getAccessToken();
+    expect(store.get()?.scope).toBe('streaming user-read-email');
+  });
+});
+
+describe('needsNewConsent', () => {
+  const tokens = { accessToken: 'A', refreshToken: 'R', expiresAt: NOW };
+
+  it('is false when every permission Pane needs was granted', () => {
+    expect(needsNewConsent({ ...tokens, scope: SCOPES.join(' ') })).toBe(false);
+    expect(needsNewConsent({ ...tokens, scope: [...SCOPES].reverse().join(' ') + ' something-extra' })).toBe(false);
+  });
+
+  it('is true when one is missing', () => {
+    const withoutEmail = SCOPES.filter((s) => s !== 'user-read-email').join(' ');
+    expect(needsNewConsent({ ...tokens, scope: withoutEmail })).toBe(true);
+  });
+
+  it('is true when the grant was never recorded, as with tokens from an older version', () => {
+    expect(needsNewConsent(tokens)).toBe(true);
+  });
+
+  it('is false when there is nobody signed in', () => {
+    expect(needsNewConsent(null)).toBe(false);
   });
 });

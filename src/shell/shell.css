@@ -306,3 +306,14 @@
   display: grid;
   place-items: center;
 }
+
+.player-notice__action {
+  flex: none;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 14px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
