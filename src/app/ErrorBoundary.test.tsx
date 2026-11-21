@@ -26,7 +26,7 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>,
     );
     expect(screen.getByRole('heading', { name: 'Something went wrong' })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Reload Pane' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Reload Mango Music' }));
     expect(onReload).toHaveBeenCalledTimes(1);
   });
 });

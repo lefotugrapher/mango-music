@@ -258,6 +258,16 @@ and artist pages.
   and never reads the address. Granted scopes are stored with the tokens, so
   a sign-in from before a scope was added is sent through consent again.
 
+- **Renamed Mango Music.** Kayzee's choice. The mark is an original mango
+  silhouette with a bite, stem and leaf, monochrome in the lockup and white on
+  a red gradient as the app icon. Storage keys and the folder keep the `pane`
+  name so existing sign-ins survive.
+- **Home follows Spotify's sections.** Jump Back In, Made For You, Your Top
+  Mixes, New Releases For You, Recently Played, Your Favourite Artists, Your
+  Playlists. Spotify closes its own recommendations and algorithmic playlists
+  to new apps, so mixes are built here from the listener's top tracks, and
+  Spotify-made playlists appear only when saved in the library.
+
 ## Left to the builder
 
 Icon set, component breakdown, animation curves, cache storage, test tooling,

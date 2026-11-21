@@ -6,6 +6,7 @@ import {
   type ItemKind,
   type LibraryGroup,
   type MusicSource,
+  type Mix,
   type Page,
   type Playlist,
   type SearchResults,
@@ -29,6 +30,14 @@ const artistItem = (a: Artist): ShelfItem => ({
 });
 const playlistItem = (p: Playlist): ShelfItem => ({
   kind: 'playlist', id: p.id, uri: p.uri, title: p.name, subtitle: p.ownerName, image: p.images[0],
+});
+
+const trackItem = (t: Track): ShelfItem => ({
+  kind: 'track', id: t.id, uri: t.uri, title: t.name,
+  subtitle: t.artists.map((x) => x.name).join(', '), image: t.album.images[0],
+});
+const mixItem = (m: Mix): ShelfItem => ({
+  kind: 'mix', id: m.id, uri: `mango:mix:${m.id}`, title: m.title, subtitle: m.description, image: m.image,
 });
 
 // Cursors are opaque to callers; here they just encode an offset.
@@ -66,18 +75,24 @@ export function createDemoSource(lib: DemoLibrary = createDemoLibrary()): MusicS
     },
 
     async home() {
+      const madeForYou = lib.playlists.filter((p) => !p.owned && p.playlist.ownerName === 'Spotify');
       const content: Record<ShelfId, ShelfItem[]> = {
-        recent: lib.albums.slice(0, 8).map(albumItem),
-        'top-picks': lib.albums.slice(8, 16).map(albumItem),
-        'heavy-rotation': lib.albums.slice(16, 24).map(albumItem),
-        'new-from-artists': newest.slice(0, 8).map(albumItem),
-        playlists: lib.playlists.map((p) => playlistItem(p.playlist)),
+        'jump-back-in': [
+          ...lib.albums.slice(0, 3).map(albumItem),
+          ...lib.playlists.slice(0, 2).map((p) => playlistItem(p.playlist)),
+          ...lib.artists.slice(0, 2).map(artistItem),
+          ...lib.albums.slice(3, 6).map(albumItem),
+        ],
+        'made-for-you': madeForYou.map((p) => ({ ...playlistItem(p.playlist), subtitle: 'Made for you by Spotify' })),
+        'top-mixes': lib.mixes.map(mixItem),
+        'new-releases': newest.slice(0, 8).map(albumItem),
+        recent: lib.tracks.slice(0, 12).map(trackItem),
+        'favourite-artists': lib.artists.slice(0, 10).map(artistItem),
+        playlists: lib.playlists.filter((p) => !madeForYou.includes(p)).map((p) => playlistItem(p.playlist)),
       };
-      return (Object.keys(SHELVES) as ShelfId[]).map<Shelf>((id) => ({
-        id,
-        title: SHELVES[id],
-        items: content[id],
-      }));
+      return (Object.keys(SHELVES) as ShelfId[])
+        .map<Shelf>((id) => ({ id, title: SHELVES[id], items: content[id] }))
+        .filter((s) => s.items.length > 0);
     },
 
     async recentlyAdded() {
@@ -106,6 +121,10 @@ export function createDemoSource(lib: DemoLibrary = createDemoLibrary()): MusicS
     async playlist(id) {
       const p = find(lib.playlists, (x) => x.playlist.id === id, 'Playlist');
       return { ...p.playlist, tracks: p.owned ? p.tracks : null };
+    },
+
+    async mix(id) {
+      return find(lib.mixes, (m) => m.id === id, 'Mix');
     },
 
     async artist(id) {

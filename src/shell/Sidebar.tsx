@@ -1,6 +1,7 @@
 import { GearSix, Playlist } from '@phosphor-icons/react';
 import { useQuery } from '@tanstack/react-query';
 import { NavLink } from 'react-router';
+import { Brand } from '../brand/MangoLogo';
 import { Glass } from '../glass/Glass';
 import { useSource } from '../session/hooks';
 import { HOME_LINK, LIBRARY_LINKS, LIKED_LINK, SEARCH_LINK, type NavEntry } from './nav';
@@ -25,9 +26,8 @@ export function Sidebar() {
 
   return (
     <Glass as="nav" aria-label="Sidebar" className="sidebar" radius={22}>
-      <div className="sidebar__brand" aria-hidden="true">
-        <span className="sidebar__mark" />
-        <span>Pane</span>
+      <div className="sidebar__brand">
+        <Brand />
       </div>
 
       <div className="sidebar__scroll">

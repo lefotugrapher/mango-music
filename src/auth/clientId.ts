@@ -5,7 +5,7 @@ export type KnownClientId = { id: string; source: 'built-in' | 'stored' };
 /**
  * Which Spotify Client ID to sign in with, if any is known.
  *
- * A copy of Pane can carry one in its build (`VITE_SPOTIFY_CLIENT_ID`), so the
+ * A copy of Mango Music can carry one in its build (`VITE_SPOTIFY_CLIENT_ID`), so the
  * people using that copy never see the setup step. A Client ID someone typed
  * in themselves wins over it. A Client ID is a public identifier, not a
  * secret: PKCE sign-in has no client secret at all.

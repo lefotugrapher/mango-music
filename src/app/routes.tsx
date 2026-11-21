@@ -6,6 +6,7 @@ import { GlassLab } from '../screens/GlassLab';
 import { Home } from '../screens/Home';
 import { Library } from '../screens/Library';
 import { LibrarySection } from '../screens/LibrarySection';
+import { MixPage } from '../screens/MixPage';
 import { PlaylistPage } from '../screens/PlaylistPage';
 import { Search } from '../screens/Search';
 
@@ -20,6 +21,7 @@ export function AppRoutes({ settings }: { settings: ReactNode }) {
       <Route path="/album/:id" element={<AlbumPage />} />
       <Route path="/playlist/:id" element={<PlaylistPage />} />
       <Route path="/artist/:id" element={<ArtistPage />} />
+      <Route path="/mix/:id" element={<MixPage />} />
       <Route path="/settings" element={settings} />
       {import.meta.env.DEV && <Route path="/__glass" element={<GlassLab />} />}
       <Route path="*" element={<Navigate to="/" replace />} />

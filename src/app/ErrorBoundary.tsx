@@ -16,7 +16,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('Pane hit an unexpected error', error, info.componentStack);
+    console.error('Mango Music hit an unexpected error', error, info.componentStack);
   }
 
   render() {
@@ -25,9 +25,9 @@ export class ErrorBoundary extends Component<Props, State> {
     return (
       <div className="empty" style={{ height: '100%', justifyContent: 'center' }}>
         <h1 className="empty__title">Something went wrong</h1>
-        <p className="empty__body">Pane ran into a problem it could not recover from. Reloading usually fixes it.</p>
+        <p className="empty__body">Mango Music ran into a problem it could not recover from. Reloading usually fixes it.</p>
         <button type="button" className="btn btn--primary" onClick={reload}>
-          Reload Pane
+          Reload Mango Music
         </button>
       </div>
     );

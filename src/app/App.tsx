@@ -219,7 +219,7 @@ export function App({ deps: injected }: { deps?: AppDeps }) {
       <GlassFilterHost tier={tier}>
         {phase.name === 'booting' && (
           <div className="app-boot">
-            <Loading label="Starting Pane" />
+            <Loading label="Starting Mango Music" />
           </div>
         )}
         {phase.name === 'setup' && (

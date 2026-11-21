@@ -1,6 +1,7 @@
 import { useId, useState, type FormEvent } from 'react';
 import { ArrowSquareOut, Check, Copy, SpotifyLogo } from '@phosphor-icons/react';
 import { parseClientId, redirectUriFor, type RedirectInfo } from '../auth/redirect';
+import { MangoTile } from '../brand/MangoLogo';
 import { Glass } from '../glass/Glass';
 import { MeshBackground } from '../nowplaying/MeshBackground';
 import './screens.css';
@@ -25,7 +26,7 @@ function AddressProblem({ info }: { info: RedirectInfo }) {
   if (info.problem === 'localhost') {
     return (
       <p className="setup__alert" role="alert">
-        Spotify doesn't accept <code>localhost</code> addresses. Open Pane at{' '}
+        Spotify doesn't accept <code>localhost</code> addresses. Open Mango Music at{' '}
         <a href={info.suggested}>{info.suggested}</a> instead, then continue.
       </p>
     );
@@ -33,7 +34,7 @@ function AddressProblem({ info }: { info: RedirectInfo }) {
   if (info.problem === 'insecure') {
     return (
       <p className="setup__alert" role="alert">
-        Spotify only accepts HTTPS addresses, or <code>127.0.0.1</code> on this computer. Open Pane from one of those
+        Spotify only accepts HTTPS addresses, or <code>127.0.0.1</code> on this computer. Open Mango Music from one of those
         to continue.
       </p>
     );
@@ -42,7 +43,7 @@ function AddressProblem({ info }: { info: RedirectInfo }) {
 }
 
 /**
- * Signing in. Pane never handles a Spotify password: the button sends the
+ * Signing in. Mango Music never handles a Spotify password: the button sends the
  * person to Spotify's own page, which offers email and password, Google,
  * Apple and Facebook, and Spotify sends them back signed in.
  */
@@ -64,7 +65,7 @@ function SignIn({
         Continue with Spotify
       </button>
       <p className="setup__methods">
-        You sign in on Spotify's own page, with your email and password, Google, Apple or Facebook. Pane never sees
+        You sign in on Spotify's own page, with your email and password, Google, Apple or Facebook. Mango Music never sees
         your password.
       </p>
       <button type="button" className="btn setup__secondary" onClick={onDemo}>
@@ -77,7 +78,7 @@ function SignIn({
   );
 }
 
-/** The one-time step: registering a Spotify developer app and giving Pane its Client ID. */
+/** The one-time step: registering a Spotify developer app and giving Mango Music its Client ID. */
 function ClientIdForm({
   redirectUri,
   blocked,
@@ -184,7 +185,7 @@ function ClientIdForm({
           </p>
         )}
         <p id={hintId} className="setup__hint">
-          Never paste your Client Secret. Pane doesn't need it, and it should stay private.
+          Never paste your Client Secret. Mango Music doesn't need it, and it should stay private.
         </p>
 
         <div className="setup__buttons">
@@ -213,8 +214,8 @@ export function Setup({ notice, clientId = null, editing = false, location = win
 
       <Glass as="main" className="setup__card" radius={28} data-view={showForm ? 'form' : 'signin'}>
         <header className="setup__header">
-          <span className="setup__mark" aria-hidden="true" />
-          <h1 className="setup__title">Pane</h1>
+          <MangoTile className="setup__mark" />
+          <h1 className="setup__title">Mango Music</h1>
           <p className="setup__lede">A glass player for your own Spotify account.</p>
         </header>
 
@@ -242,7 +243,7 @@ export function Setup({ notice, clientId = null, editing = false, location = win
         )}
 
         <p className="setup__foot">
-          Playback needs Spotify Premium. Everything stays in this browser. Pane is an unofficial project and is not
+          Playback needs Spotify Premium. Everything stays in this browser. Mango Music is an unofficial project and is not
           affiliated with Spotify.
         </p>
       </Glass>

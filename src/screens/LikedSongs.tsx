@@ -107,7 +107,7 @@ export function LikedSongs() {
       {query.isError && tracks.length === 0 && (
         <EmptyState
           title="Liked Songs didn't load"
-          body="Pane couldn't reach Spotify for your liked songs. They are still safe in your account."
+          body="Mango Music couldn't reach Spotify for your liked songs. They are still safe in your account."
           action={
             <button type="button" className="btn" onClick={() => void query.refetch()}>
               Retry

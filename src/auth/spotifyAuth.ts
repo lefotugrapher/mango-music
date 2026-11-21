@@ -14,7 +14,7 @@ export class AuthError extends Error {
 export const SCOPES: readonly string[] = [
   // The in-browser player (Web Playback SDK) refuses a token that lacks any of
   // these three, with an authentication error, even though the Web API itself
-  // is happy without the email one. Pane never reads the email address.
+  // is happy without the email one. Mango Music never reads the email address.
   'streaming',
   'user-read-email',
   'user-read-private',
@@ -111,8 +111,8 @@ export function readStoredTokens(): Tokens | null {
 
 /**
  * True when someone is signed in but their grant does not cover everything
- * Pane asks for today: a permission was added since they signed in, or the
- * grant predates Pane recording it. Refreshing cannot widen a grant, so they
+ * Mango Music asks for today: a permission was added since they signed in, or the
+ * grant predates Mango Music recording it. Refreshing cannot widen a grant, so they
  * have to go through Spotify's consent screen once more.
  */
 export function needsNewConsent(tokens: Tokens | null): boolean {
@@ -180,7 +180,7 @@ export async function completeLogin(
       accessToken: parsed.access_token,
       refreshToken: parsed.refresh_token,
       expiresAt: now() + parsed.expires_in * 1000,
-      // Recorded so a later version of Pane can tell whether this grant
+      // Recorded so a later version of Mango Music can tell whether this grant
       // covers a permission it has since started asking for.
       scope: parsed.scope,
     } satisfies Tokens);

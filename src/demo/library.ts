@@ -1,4 +1,4 @@
-import type { Album, AlbumRef, Artist, ArtistRef, Image, Playlist, Track } from '../domain/types';
+import type { Album, AlbumRef, Artist, ArtistRef, Image, Mix, Playlist, Track } from '../domain/types';
 import { demoArtwork, mulberry32 } from './artwork';
 
 export type DemoPlaylist = { playlist: Playlist; tracks: Track[]; owned: boolean };
@@ -6,6 +6,8 @@ export type DemoLibrary = {
   artists: Artist[];
   albums: Album[];
   playlists: DemoPlaylist[];
+  /** Mixes for the 'top-mixes' shelf; uri form is `mango:mix:<id>`. */
+  mixes: Mix[];
   /** Every track, album by album. */
   tracks: Track[];
 };
@@ -59,6 +61,8 @@ const PLAYLIST_NAMES = [
   'Morning Static', 'Late Night Drive', 'Focus Garden', 'Sunday Slow Down',
   'Rainy Window', 'Weekend Warmup', 'Paper Planes', 'Studio Collective Picks',
 ];
+/** Invented names on purpose: these stand in for Spotify-made playlists. */
+const SPOTIFY_PLAYLIST_NAMES = ['Monday Discoveries', 'Friday Arrivals', 'Daily Blend 1', 'Daily Blend 2'];
 
 const image = (seed: string): Image => ({ url: demoArtwork(seed), width: 600, height: 600 });
 
@@ -132,9 +136,8 @@ export function createDemoLibrary(): DemoLibrary {
     };
   });
 
-  const playlists: DemoPlaylist[] = PLAYLIST_NAMES.map((name, i) => {
+  const makePlaylist = (name: string, i: number, owned: boolean, ownerName: string): DemoPlaylist => {
     const id = `pl${String(i + 1).padStart(2, '0')}`;
-    const owned = i !== PLAYLIST_NAMES.length - 1;
     return {
       owned,
       tracks: shuffled(tracks).slice(0, int(14, 26)),
@@ -144,18 +147,47 @@ export function createDemoLibrary(): DemoLibrary {
         name,
         description: DESCRIPTIONS[i % DESCRIPTIONS.length]!,
         images: [image(`playlist:${id}`)],
-        ownerName: owned ? 'You' : 'Studio Collective',
+        ownerName,
         externalUrl: URL,
       },
     };
-  });
+  };
+  const playlists: DemoPlaylist[] = [
+    ...PLAYLIST_NAMES.map((name, i) =>
+      makePlaylist(name, i, i !== PLAYLIST_NAMES.length - 1, i !== PLAYLIST_NAMES.length - 1 ? 'You' : 'Studio Collective'),
+    ),
+    ...SPOTIFY_PLAYLIST_NAMES.map((name, i) => makePlaylist(name, PLAYLIST_NAMES.length + i, false, 'Spotify')),
+  ];
 
-  return { artists, albums, playlists, tracks };
+  const makeMix = (id: string, title: string, description: string, picked: Track[]): Mix => ({
+    id,
+    title,
+    description,
+    image: picked[0]?.album.images[0],
+    tracks: picked,
+  });
+  const mixes: Mix[] = [
+    makeMix('on-repeat', 'On Repeat', 'What you play most right now', shuffled(tracks).slice(0, int(20, 40))),
+    makeMix('top-songs', 'Your Top Songs', 'Your favourites of the last six months', shuffled(tracks).slice(0, int(20, 40))),
+    makeMix('all-time', 'All-Time Favourites', 'The songs you always come back to', shuffled(tracks).slice(0, int(20, 40))),
+    ...artists.slice(0, 2).map((a) =>
+      makeMix(
+        `artist:${a.id}`,
+        `${a.name} Mix`,
+        'Built from what you play',
+        tracks.filter((t) => t.artists[0]?.id === a.id).slice(0, 30),
+      ),
+    ),
+  ];
+
+  return { artists, albums, playlists, mixes, tracks };
 }
 
 export function resolveTracks(lib: DemoLibrary, uri: string): Track[] {
   const album = lib.albums.find((a) => a.uri === uri);
   if (album) return album.tracks;
+  const mix = lib.mixes.find((m) => uri === `mango:mix:${m.id}`);
+  if (mix) return mix.tracks;
   const playlist = lib.playlists.find((p) => p.playlist.uri === uri);
   if (playlist) return playlist.tracks;
   const artist = lib.artists.find((a) => a.uri === uri);

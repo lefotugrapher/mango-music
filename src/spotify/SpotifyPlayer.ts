@@ -4,14 +4,14 @@ import { sdkTrackToTrack, toTrack } from './mappers';
 import type { RawDevices, RawPlayerResponse, WebPlaybackState } from './raw';
 import type { SdkEventMap, SpotifyNamespace } from './sdk';
 
-const DEVICE_NAME = 'Pane';
+const DEVICE_NAME = 'Mango Music';
 const POLL_MS = 5000;
 const REMOTE_VOLUME_DELAY_MS = 300;
 
 const MESSAGES = {
   premium_required: 'Playback needs Spotify Premium. You can still browse.',
-  unsupported_browser: "This browser can't play protected audio. Pick another device, or open Pane in Chrome.",
-  token: "Pane couldn't reach Spotify to start the player. Check your connection.",
+  unsupported_browser: "This browser can't play protected audio. Pick another device, or open Mango Music in Chrome.",
+  token: "Mango Music couldn't reach Spotify to start the player. Check your connection.",
 } as const;
 
 /** The SDK says why it refused a token (a missing permission, usually). Pass that on. */

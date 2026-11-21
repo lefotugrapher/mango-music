@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { NotFoundError } from '../domain/types';
+import { NotFoundError, SHELVES, type ShelfId } from '../domain/types';
 import { SpotifyError, type Params, type SpotifyClient } from './contract';
 import { createSpotifySource } from './SpotifySource';
 
@@ -59,12 +59,33 @@ describe('librarySongs() size', () => {
   });
 });
 
+const ctx = (uri: string) => ({ uri, type: uri.split(':')[1] });
+const play = (t: unknown, context?: string) => ({ track: t, context: context ? ctx(context) : null });
+const plRaw = (id: string, owner = 'u', extra: Record<string, unknown> = {}) => ({
+  id, uri: `spotify:playlist:${id}`, name: `Playlist ${id}`, owner: { id: owner, display_name: owner === 'spotify' ? 'Spotify' : `Owner ${owner}` },
+  images: [{ url: `http://pl/${id}` }], ...extra,
+});
+const shelfOf = async (routes: Record<string, Route>, id: string) => {
+  const { client, calls } = fakeClient(routes);
+  const shelves = await createSpotifySource({ client, storage }).home();
+  return { shelf: shelves.find((s) => s.id === id), shelves, calls };
+};
+const ranges = (lists: { short?: unknown[]; medium?: unknown[]; long?: unknown[] }): Route => (c: Call) => {
+  const r = { short_term: lists.short, medium_term: lists.medium, long_term: lists.long }[String(c.params?.time_range)];
+  if (!r) throw new SpotifyError(500);
+  return paging(r);
+};
+const by = (artistId: string, n: number, from = 0) =>
+  Array.from({ length: n }, (_, i) =>
+    track(`${artistId}${from + i}`, { artists: [{ id: artistId, name: `Name ${artistId}` }] }),
+  );
+
 describe('home() when Spotify cannot be reached', () => {
   const fail = () => {
     throw new SpotifyError(0, 'network');
   };
 
-  it('rejects when every core request fails, so Home can offer a retry instead of looking empty', async () => {
+  it('rejects when recent, top-mixes and playlists all fail, so Home can offer a retry instead of looking empty', async () => {
     const { client } = fakeClient({
       '/me/player/recently-played': fail,
       '/me/top/tracks': fail,
@@ -78,6 +99,16 @@ describe('home() when Spotify cannot be reached', () => {
   it('still resolves when only some requests fail', async () => {
     const { client } = fakeClient({ ...homeBase(), '/me/player/recently-played': fail, '/me/top/tracks': fail });
     await expect(createSpotifySource({ client, storage }).home()).resolves.toEqual([]);
+  });
+
+  it('still resolves when only the playlists request fails', async () => {
+    const { client } = fakeClient({
+      ...homeBase(),
+      '/me/playlists': fail,
+      '/me/player/recently-played': paging([play(track('1'))]),
+    });
+    const shelves = await createSpotifySource({ client, storage }).home();
+    expect(shelves.map((s) => s.id)).toEqual(['jump-back-in', 'recent']);
   });
 });
 
@@ -102,34 +133,294 @@ describe('home()', () => {
     await expect(createSpotifySource({ client, storage }).home()).rejects.toBeInstanceOf(SpotifyError);
   });
 
-  it('de-duplicates recently played by album, most recent first, skipping dirty items', async () => {
-    const { client } = fakeClient({
-      ...homeBase(),
-      '/me/player/recently-played': paging([
-        { track: track('1', { album: album('x') }) },
-        { track: track('2', { album: album('y') }) },
-        { track: track('3', { album: album('x') }) },
-        { track: null },
-        { track: track('4', { type: 'episode', album: album('z') }) },
-        { track: track('5', { id: null, album: album('w') }) },
-      ]),
-    });
-    const [shelf] = await createSpotifySource({ client, storage }).home();
-    expect(shelf?.id).toBe('recent');
-    expect(shelf?.items.map((i) => i.id)).toEqual(['x', 'y']);
-    expect(shelf?.items[0]).toMatchObject({ kind: 'album', subtitle: 'Ann' });
+  it('returns shelves in SHELVES order with the SHELVES titles', async () => {
+    const { shelves } = await shelfOf(
+      {
+        ...homeBase(),
+        '/me/player/recently-played': paging([play(track('1'))]),
+        '/me/top/tracks': paging([track('1')]),
+        '/me/top/artists': paging([artist('9')]),
+        '/me/playlists': paging([plRaw('p1'), plRaw('s1', 'spotify')]),
+        '/me/following': { artists: { items: [artist('9')], next: null, cursors: {} } },
+        '/artists/9/albums': paging([album('n1')]),
+      },
+      'recent',
+    );
+    const ids = shelves.map((s) => s.id);
+    const order = Object.keys(SHELVES);
+    expect(ids).toEqual(order.filter((id) => ids.includes(id)));
+    expect(ids).toEqual(['jump-back-in', 'made-for-you', 'top-mixes', 'new-releases', 'recent', 'favourite-artists', 'playlists']);
+    expect(shelves.map((s) => s.title)).toEqual(ids.map((id) => SHELVES[id as ShelfId]));
   });
 
-  it('builds top picks from short_term and heavy rotation from medium_term', async () => {
-    const { client, calls } = fakeClient({
-      ...homeBase(),
-      '/me/top/tracks': paging([track('1')]),
-      '/me/top/artists': paging([artist('9')]),
+  describe('jump back in', () => {
+    const unknownPlaylist = (id: string) => [`/playlists/${id}`, plRaw(id, 'z')] as const;
+
+    it('mixes album, playlist and artist contexts, newest first', async () => {
+      const { shelf, calls } = await shelfOf(
+        {
+          ...homeBase(),
+          '/me/player/recently-played': paging([
+            play(track('1', { album: album('x') }), 'spotify:album:x'),
+            play(track('2'), 'spotify:playlist:p1'),
+            play(track('3', { artists: [{ id: 'q', name: 'Quinn' }, { id: 'a', name: 'Ann' }] }), 'spotify:artist:a'),
+            play(track('4', { album: album('y') })),
+          ]),
+          '/me/playlists': paging([plRaw('p1', 'u')]),
+        },
+        'jump-back-in',
+      );
+      expect(shelf?.items.map((i) => [i.kind, i.id, i.uri, i.title, i.subtitle])).toEqual([
+        ['album', 'x', 'spotify:album:x', 'Album x', 'Ann'],
+        ['playlist', 'p1', 'spotify:playlist:p1', 'Playlist p1', 'Owner u'],
+        ['artist', 'a', 'spotify:artist:a', 'Ann', 'Artist'],
+        ['album', 'y', 'spotify:album:y', 'Album y', 'Ann'],
+      ]);
+      expect(shelf?.items[1]?.image).toEqual({ url: 'http://pl/p1' });
+      expect(shelf?.items[2]?.image).toBeUndefined();
+      // The title came from the listener's own list, so no per-playlist request.
+      expect(calls.some((c) => c.path.startsWith('/playlists/'))).toBe(false);
     });
-    const shelves = await createSpotifySource({ client, storage }).home();
-    expect(shelves.map((s) => s.id)).toEqual(['top-picks', 'heavy-rotation']);
-    expect(calls.find((c) => c.path === '/me/top/tracks')?.params).toMatchObject({ time_range: 'short_term' });
-    expect(calls.find((c) => c.path === '/me/top/artists')?.params).toMatchObject({ time_range: 'medium_term' });
+
+    it("subtitles a playlist 'Playlist' when it has no owner name, and skips an artist missing from the track", async () => {
+      const { shelf } = await shelfOf(
+        {
+          ...homeBase(),
+          '/me/player/recently-played': paging([
+            play(track('1'), 'spotify:playlist:p1'),
+            play(track('2'), 'spotify:artist:gone'),
+          ]),
+          '/me/playlists': paging([{ ...plRaw('p1'), owner: undefined }]),
+        },
+        'jump-back-in',
+      );
+      expect(shelf?.items.map((i) => [i.id, i.subtitle])).toEqual([['p1', 'Playlist']]);
+    });
+
+    it('de-duplicates by uri, keeping the first sighting', async () => {
+      const { shelf } = await shelfOf(
+        {
+          ...homeBase(),
+          '/me/player/recently-played': paging([
+            play(track('1', { album: album('x') })),
+            play(track('2'), 'spotify:playlist:p1'),
+            play(track('3', { album: album('x') }), 'spotify:album:x'),
+            play(track('4'), 'spotify:playlist:p1'),
+            play(null, 'spotify:playlist:p1'),
+          ]),
+          '/me/playlists': paging([plRaw('p1')]),
+        },
+        'jump-back-in',
+      );
+      expect(shelf?.items.map((i) => i.id)).toEqual(['x', 'p1']);
+    });
+
+    it('caps at 12', async () => {
+      const { shelf } = await shelfOf(
+        {
+          ...homeBase(),
+          '/me/player/recently-played': paging(
+            Array.from({ length: 15 }, (_, i) => play(track(`t${i}`, { album: album(`al${i}`) }))),
+          ),
+        },
+        'jump-back-in',
+      );
+      expect(shelf?.items.map((i) => i.id)).toEqual(Array.from({ length: 12 }, (_, i) => `al${i}`));
+    });
+
+    it('looks up at most 6 playlists that are not in the listener list', async () => {
+      const ids = Array.from({ length: 8 }, (_, i) => `u${i}`);
+      const { shelf, calls } = await shelfOf(
+        {
+          ...homeBase(),
+          '/me/player/recently-played': paging(ids.map((id) => play(track(id), `spotify:playlist:${id}`))),
+          ...Object.fromEntries(ids.map(unknownPlaylist)),
+        },
+        'jump-back-in',
+      );
+      expect(calls.filter((c) => c.path.startsWith('/playlists/')).map((c) => c.path)).toEqual(
+        ids.slice(0, 6).map((id) => `/playlists/${id}`),
+      );
+      expect(shelf?.items.map((i) => i.id)).toEqual(ids.slice(0, 6));
+      expect(shelf?.items[0]).toMatchObject({ title: 'Playlist u0', subtitle: 'Owner z' });
+    });
+
+    it('skips a playlist whose lookup fails without failing the shelf', async () => {
+      const { shelf } = await shelfOf(
+        {
+          ...homeBase(),
+          '/me/player/recently-played': paging([
+            play(track('1'), 'spotify:playlist:bad'),
+            play(track('2'), 'spotify:playlist:ok'),
+            play(track('3', { album: album('x') })),
+          ]),
+          '/playlists/bad': () => {
+            throw new SpotifyError(500);
+          },
+          ...Object.fromEntries([unknownPlaylist('ok')]),
+        },
+        'jump-back-in',
+      );
+      expect(shelf?.items.map((i) => i.id)).toEqual(['ok', 'x']);
+    });
+
+    it('shares one /me/playlists fetch with the other shelves', async () => {
+      const { calls } = await shelfOf(
+        {
+          ...homeBase(),
+          '/me/player/recently-played': paging([play(track('1'), 'spotify:playlist:p1')]),
+          '/me/playlists': paging([plRaw('p1')]),
+        },
+        'jump-back-in',
+      );
+      expect(calls.filter((c) => c.path === '/me/playlists')).toHaveLength(1);
+      expect(calls.filter((c) => c.path === '/me/player/recently-played')).toHaveLength(1);
+    });
+  });
+
+  describe('made for you and playlists', () => {
+    const mine = paging([plRaw('p1'), plRaw('s1', 'spotify'), plRaw('p2', 'v'), plRaw('s2', 'spotify')]);
+
+    it('made-for-you holds only playlists owned by spotify, and playlists leaves them out', async () => {
+      const { shelves } = await shelfOf({ ...homeBase(), '/me/playlists': mine }, 'x');
+      const made = shelves.find((s) => s.id === 'made-for-you');
+      expect(made?.items.map((i) => [i.kind, i.id, i.subtitle])).toEqual([
+        ['playlist', 's1', 'Made for you by Spotify'],
+        ['playlist', 's2', 'Made for you by Spotify'],
+      ]);
+      expect(shelves.find((s) => s.id === 'playlists')?.items.map((i) => i.id)).toEqual(['p1', 'p2']);
+    });
+
+    it('omits made-for-you when the listener has none', async () => {
+      const { shelves } = await shelfOf({ ...homeBase(), '/me/playlists': paging([plRaw('p1')]) }, 'x');
+      expect(shelves.map((s) => s.id)).toEqual(['playlists']);
+    });
+
+    it('follows next for up to 4 pages of 50', async () => {
+      const { shelves, calls } = await shelfOf(
+        {
+          ...homeBase(),
+          '/me/playlists': (c: Call) => {
+            const offset = Number(c.params?.offset ?? 0);
+            return paging([plRaw(`s${offset}`, 'spotify')], 'https://more');
+          },
+        },
+        'x',
+      );
+      const reqs = calls.filter((c) => c.path === '/me/playlists');
+      expect(reqs.map((c) => [c.params?.limit, c.params?.offset])).toEqual([[50, 0], [50, 50], [50, 100], [50, 150]]);
+      expect(shelves.find((s) => s.id === 'made-for-you')?.items).toHaveLength(4);
+    });
+  });
+
+  describe('top mixes', () => {
+    it('builds the three fixed mixes from the three time ranges', async () => {
+      const { shelf, calls } = await shelfOf(
+        {
+          ...homeBase(),
+          '/me/top/tracks': ranges({
+            short: [track('s1', { album: album('as', { images: [{ url: 'http://s' }] }) })],
+            medium: [track('m1', { album: album('am', { images: [{ url: 'http://m' }] }) })],
+            long: [track('l1')],
+          }),
+        },
+        'top-mixes',
+      );
+      expect(shelf?.title).toBe('Your Top Mixes');
+      expect(shelf?.items).toEqual([
+        { kind: 'mix', id: 'on-repeat', uri: 'mango:mix:on-repeat', title: 'On Repeat', subtitle: 'What you play most right now', image: { url: 'http://s' } },
+        { kind: 'mix', id: 'top-songs', uri: 'mango:mix:top-songs', title: 'Your Top Songs', subtitle: 'Your favourites of the last six months', image: { url: 'http://m' } },
+        { kind: 'mix', id: 'all-time', uri: 'mango:mix:all-time', title: 'All-Time Favourites', subtitle: 'The songs you always come back to', image: { url: 'http://img/alb' } },
+      ]);
+      const reqs = calls.filter((c) => c.path === '/me/top/tracks').map((c) => [c.params?.time_range, c.params?.limit]);
+      expect(reqs).toEqual([['short_term', 50], ['medium_term', 50], ['long_term', 50]]);
+    });
+
+    it('gives an artist with 6 tracks a mix but not one with 5', async () => {
+      const { shelf } = await shelfOf(
+        { ...homeBase(), '/me/top/tracks': ranges({ medium: [...by('x', 6), ...by('y', 5)] }) },
+        'top-mixes',
+      );
+      expect(shelf?.items.map((i) => i.id)).toEqual(['top-songs', 'artist:x']);
+      expect(shelf?.items[1]).toMatchObject({
+        kind: 'mix', uri: 'mango:mix:artist:x', title: 'Name x Mix', subtitle: 'Built from what you play',
+      });
+    });
+
+    it('counts a track once across ranges, and for every credited artist', async () => {
+      const dup = by('x', 5);
+      const duet = Array.from({ length: 6 }, (_, i) =>
+        track(`d${i}`, { artists: [{ id: 'p', name: 'Pia' }, { id: 'q', name: 'Quin' }] }),
+      );
+      const { shelf } = await shelfOf(
+        { ...homeBase(), '/me/top/tracks': ranges({ short: dup, medium: [...dup, ...duet], long: dup }) },
+        'top-mixes',
+      );
+      expect(shelf?.items.map((i) => i.id).filter((id) => id.startsWith('artist:'))).toEqual(['artist:p', 'artist:q']);
+    });
+
+    it('keeps at most 4 artist mixes, most tracks first', async () => {
+      const lists = ['a', 'b', 'c', 'd', 'e', 'f'].flatMap((id, i) => by(id, 6 + i));
+      const { shelf } = await shelfOf({ ...homeBase(), '/me/top/tracks': ranges({ medium: lists }) }, 'top-mixes');
+      expect(shelf?.items.map((i) => i.id)).toEqual(['top-songs', 'artist:f', 'artist:e', 'artist:d', 'artist:c']);
+    });
+
+    it('leaves out a range that failed, and the shelf when all three fail', async () => {
+      const { shelf } = await shelfOf({ ...homeBase(), '/me/top/tracks': ranges({ long: [track('1')] }) }, 'top-mixes');
+      expect(shelf?.items.map((i) => i.id)).toEqual(['all-time']);
+      const none = await shelfOf({ ...homeBase(), '/me/top/tracks': ranges({}) }, 'top-mixes');
+      expect(none.shelf).toBeUndefined();
+    });
+
+    it('drops local and unplayable-as-null tracks before building', async () => {
+      const { shelf } = await shelfOf(
+        { ...homeBase(), '/me/top/tracks': ranges({ short: [track('1', { id: null, is_local: true }), null] }) },
+        'top-mixes',
+      );
+      expect(shelf).toBeUndefined();
+    });
+  });
+
+  describe('recent', () => {
+    it('lists tracks newest first, de-duplicated by track uri, with artist names and album art', async () => {
+      const { shelf } = await shelfOf(
+        {
+          ...homeBase(),
+          '/me/player/recently-played': paging([
+            play(track('1', { artists: [{ id: 'a', name: 'Ann' }, { id: 'b', name: 'Bo' }] })),
+            play(track('2')),
+            play(track('1')),
+            play(null),
+            play(track('3', { type: 'episode' })),
+            play(track('4', { id: null })),
+          ]),
+        },
+        'recent',
+      );
+      expect(shelf?.items.map((i) => [i.kind, i.id, i.uri])).toEqual([
+        ['track', '1', 'spotify:track:1'],
+        ['track', '2', 'spotify:track:2'],
+      ]);
+      expect(shelf?.items[0]).toMatchObject({ subtitle: 'Ann, Bo', image: { url: 'http://img/alb' } });
+    });
+
+    it('caps at 20', async () => {
+      const { shelf } = await shelfOf(
+        {
+          ...homeBase(),
+          '/me/player/recently-played': paging(Array.from({ length: 30 }, (_, i) => play(track(`t${i}`)))),
+        },
+        'recent',
+      );
+      expect(shelf?.items).toHaveLength(20);
+      expect(shelf?.items[19]?.id).toBe('t19');
+    });
+  });
+
+  it('builds favourite artists from medium_term top artists', async () => {
+    const { shelf, calls } = await shelfOf({ ...homeBase(), '/me/top/artists': paging([artist('9')]) }, 'favourite-artists');
+    expect(shelf?.items).toMatchObject([{ kind: 'artist', id: '9', subtitle: 'Artist' }]);
+    expect(calls.find((c) => c.path === '/me/top/artists')?.params).toMatchObject({ time_range: 'medium_term', limit: 20 });
   });
 
   describe('new from your artists', () => {
@@ -153,7 +444,7 @@ describe('home()', () => {
     it('asks for at most 10 artists, album+single, limit 5; merges, de-duplicates, sorts newest first, caps at 20', async () => {
       const { client, calls } = fakeClient(routes());
       const shelves = await createSpotifySource({ client, storage }).home();
-      const shelf = shelves.find((s) => s.id === 'new-from-artists');
+      const shelf = shelves.find((s) => s.id === 'new-releases');
       const ac = albumCalls(calls);
       expect(ac).toHaveLength(10);
       expect(ac.every((c) => c.params?.include_groups === 'album,single' && c.params?.limit === 5)).toBe(true);
@@ -176,7 +467,7 @@ describe('home()', () => {
       const second = fakeClient(routes());
       const cached = await createSpotifySource({ client: second.client, storage, now: () => t }).home();
       expect(albumCalls(second.calls)).toHaveLength(0);
-      expect(cached.find((s) => s.id === 'new-from-artists')?.items.length).toBe(20);
+      expect(cached.find((s) => s.id === 'new-releases')?.items.length).toBe(20);
 
       t += 2000;
       const third = fakeClient(routes());
@@ -189,7 +480,7 @@ describe('home()', () => {
       const { client, calls } = fakeClient(routes());
       const shelves = await createSpotifySource({ client, storage }).home();
       expect(albumCalls(calls)).toHaveLength(10);
-      expect(shelves.some((s) => s.id === 'new-from-artists')).toBe(true);
+      expect(shelves.some((s) => s.id === 'new-releases')).toBe(true);
     });
 
     it('keeps the shelf when one artist request fails', async () => {
@@ -200,7 +491,7 @@ describe('home()', () => {
           },
         }),
       );
-      const shelf = (await createSpotifySource({ client, storage }).home()).find((s) => s.id === 'new-from-artists');
+      const shelf = (await createSpotifySource({ client, storage }).home()).find((s) => s.id === 'new-releases');
       expect(shelf?.items.length).toBeGreaterThan(0);
     });
 
@@ -364,6 +655,44 @@ describe('details', () => {
     expect((await createSpotifySource({ client, storage }).playlist('p')).tracks).toBeNull();
   });
 
+  it('playlist 404 for one in the listener library resolves with tracks withheld', async () => {
+    const { client, calls } = fakeClient({
+      '/me/playlists': paging([plRaw('mix1', 'spotify', { description: 'Fresh' }), plRaw('p2')]),
+    });
+    const src = createSpotifySource({ client, storage });
+    const d = await src.playlist('mix1');
+    expect(d).toMatchObject({ id: 'mix1', uri: 'spotify:playlist:mix1', name: 'Playlist mix1', description: 'Fresh', ownerName: 'Spotify', tracks: null });
+    // The library list was fetched once, only because nothing had been seen yet.
+    await src.playlist('p2');
+    expect(calls.filter((c) => c.path === '/me/playlists')).toHaveLength(1);
+  });
+
+  it('playlist 404 uses playlists already seen on Home without fetching again', async () => {
+    const { client, calls } = fakeClient({
+      ...homeBase(),
+      '/me/playlists': paging([plRaw('mix1', 'spotify')]),
+    });
+    const src = createSpotifySource({ client, storage });
+    await src.home();
+    const before = calls.filter((c) => c.path === '/me/playlists').length;
+    expect((await src.playlist('mix1')).tracks).toBeNull();
+    expect(calls.filter((c) => c.path === '/me/playlists')).toHaveLength(before);
+  });
+
+  it('playlist 404 for an id not in the library is still NotFoundError', async () => {
+    const { client } = fakeClient({ '/me/playlists': paging([plRaw('p1')]) });
+    await expect(createSpotifySource({ client, storage }).playlist('other')).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('playlist 404 is NotFoundError when the library list cannot be fetched either', async () => {
+    const { client } = fakeClient({
+      '/me/playlists': () => {
+        throw new SpotifyError(500);
+      },
+    });
+    await expect(createSpotifySource({ client, storage }).playlist('x')).rejects.toBeInstanceOf(NotFoundError);
+  });
+
   it('artist requests albums and singles separately with limit 10', async () => {
     const { client, calls } = fakeClient({
       '/artists/ar': artist('ar'),
@@ -376,6 +705,54 @@ describe('details', () => {
     expect(r.albums.map((a) => a.id)).toEqual(['a1']);
     expect(r.singles.map((a) => a.id)).toEqual(['s1']);
     expect(r.artist.id).toBe('ar');
+  });
+});
+
+describe('mix()', () => {
+  const src = (routes: Record<string, Route>) => {
+    const { client, calls } = fakeClient(routes);
+    return { source: createSpotifySource({ client, storage }), calls };
+  };
+
+  it.each([
+    ['on-repeat', 'short_term', 'On Repeat', 'What you play most right now'],
+    ['top-songs', 'medium_term', 'Your Top Songs', 'Your favourites of the last six months'],
+    ['all-time', 'long_term', 'All-Time Favourites', 'The songs you always come back to'],
+  ])('%s loads %s only and carries its title and description', async (id, range, title, description) => {
+    const { source, calls } = src({
+      '/me/top/tracks': ranges({ short: [track('s')], medium: [track('m')], long: [track('l'), track('x', { id: null })] }),
+    });
+    const mix = await source.mix(id);
+    const want = { short_term: ['s'], medium_term: ['m'], long_term: ['l'] }[range as 'short_term'];
+    expect(mix).toMatchObject({ id, title, description });
+    expect(mix.tracks.map((t) => t.id)).toEqual(want);
+    expect(mix.image).toEqual({ url: 'http://img/alb' });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.params).toMatchObject({ time_range: range, limit: 50 });
+  });
+
+  it('an artist mix holds that artist\'s tracks from the union of the ranges, without duplicates', async () => {
+    const a = by('x', 3);
+    const { source } = src({
+      '/me/top/tracks': ranges({ short: [...a, track('other')], medium: [...a, ...by('x', 2, 3)], long: by('y', 1) }),
+    });
+    const mix = await source.mix('artist:x');
+    expect(mix).toMatchObject({ id: 'artist:x', title: 'Name x Mix', description: 'Built from what you play' });
+    expect(mix.tracks.map((t) => t.id)).toEqual(['x0', 'x1', 'x2', 'x3', 'x4']);
+  });
+
+  it('rejects NotFoundError for an unknown id and for an artist with no tracks', async () => {
+    const { source, calls } = src({ '/me/top/tracks': ranges({ short: [track('1')], medium: [], long: [] }) });
+    await expect(source.mix('nope')).rejects.toBeInstanceOf(NotFoundError);
+    expect(calls).toHaveLength(0);
+    await expect(source.mix('artist:nobody')).rejects.toBeInstanceOf(NotFoundError);
+    await expect(source.mix('top-songs')).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('rejects when its range fails, so the screen can show an error', async () => {
+    const { source } = src({ '/me/top/tracks': ranges({ medium: [track('m')] }) });
+    await expect(source.mix('on-repeat')).rejects.toBeInstanceOf(SpotifyError);
+    await expect(source.mix('top-songs')).resolves.toMatchObject({ id: 'top-songs' });
   });
 });
 

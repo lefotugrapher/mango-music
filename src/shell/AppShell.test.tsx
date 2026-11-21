@@ -41,6 +41,13 @@ describe('AppShell on a desktop-width window', () => {
     expect(nav.queryByRole('link', { name: 'Songs' })).toBeNull();
   });
 
+  it('carries the Mango Music brand', () => {
+    setDesktop(true);
+    renderApp(shell);
+    const nav = within(screen.getByRole('navigation', { name: 'Sidebar' }));
+    expect(nav.getByRole('img', { name: 'Mango Music' })).toBeInTheDocument();
+  });
+
   it('keeps Liked Songs near the top, right under Home', () => {
     setDesktop(true);
     renderApp(shell);

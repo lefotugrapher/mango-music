@@ -132,7 +132,7 @@ export function Settings({ mode, onDisconnect, onChangeClientId }: Props) {
         </h2>
         <div className="settings__card">
           <p className="settings__hint">
-            Pane is an unofficial, non-commercial player. Music, artwork and playback come from Spotify through your
+            Mango Music is an unofficial, non-commercial player. Music, artwork and playback come from Spotify through your
             own developer app; nothing leaves this browser except requests to Spotify.
           </p>
         </div>

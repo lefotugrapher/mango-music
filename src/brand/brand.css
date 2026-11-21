@@ -1,0 +1,48 @@
+/* The Mango Music mark and lockup. */
+.mango {
+  display: block;
+  width: 1em;
+  height: 1em;
+  flex: none;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.08em;
+  /* San Francisco where the system has it (every Apple device); the font
+     itself is not shipped, so other systems fall back to their own UI face. */
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial,
+    sans-serif;
+  font-size: 21px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  color: var(--text);
+}
+
+.brand .mango {
+  width: 1.12em;
+  height: 1.12em;
+  /* Optically centre the mark on the word: the leaf adds height above. */
+  margin-top: -0.2em;
+}
+
+/* App icon: white mark on the red gradient. */
+.mango-tile {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  aspect-ratio: 1;
+  border-radius: 23%;
+  color: #fff;
+  background: linear-gradient(180deg, #fb5c74 0%, #fa233b 100%);
+  box-shadow: 0 10px 30px rgba(250, 35, 59, 0.42);
+}
+
+.mango-tile .mango {
+  width: 64%;
+  height: 64%;
+  /* The silhouette leans right; nudge it back to the tile's visual centre. */
+  transform: translate(-3%, 2%);
+}

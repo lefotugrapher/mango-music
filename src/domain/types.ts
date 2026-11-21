@@ -43,7 +43,14 @@ export type PlaylistDetail = Playlist & { tracks: Track[] | null };
  * total, when the source knows it, is the size of the whole list.
  */
 export type Page<T> = { items: T[]; next: string | null; total?: number };
-export type ItemKind = 'album' | 'artist' | 'playlist' | 'track';
+export type ItemKind = 'album' | 'artist' | 'playlist' | 'track' | 'mix';
+
+/**
+ * A playlist the app assembles itself from the listener's own history (their
+ * most played songs, say). Spotify's own personalised playlists are closed to
+ * third-party apps, so these stand in for them.
+ */
+export type Mix = { id: string; title: string; description: string; image?: Image; tracks: Track[] };
 export type ShelfItem = { kind: ItemKind; id: string; uri: string; title: string; subtitle: string; image?: Image };
 export type Shelf = { id: string; title: string; items: ShelfItem[] };
 export type SearchResults = {
@@ -71,18 +78,31 @@ export interface MusicSource {
   album(id: string): Promise<Album>;
   playlist(id: string): Promise<PlaylistDetail>;
   artist(id: string): Promise<{ artist: Artist; albums: AlbumRef[]; singles: AlbumRef[] }>;
+  /** A mix listed on a Home shelf. Rejects with NotFoundError for an unknown id. */
+  mix(id: string): Promise<Mix>;
   /** With kind and cursor, only that group is filled; the others are empty pages. */
   search(query: string, kind?: ItemKind, cursor?: string): Promise<SearchResults>;
   isSaved(uris: string[]): Promise<boolean[]>;
   setSaved(uris: string[], saved: boolean): Promise<void>;
 }
 
-/** Shelf ids and titles shared by every MusicSource. */
+/**
+ * Home shelves, in display order, shared by every MusicSource. They mirror the
+ * sections of Spotify's own Home as far as its Web API allows.
+ */
 export const SHELVES = {
+  /** Albums, playlists and artists recently played from. */
+  'jump-back-in': 'Jump Back In',
+  /** Playlists made by Spotify that are saved in the listener's library. */
+  'made-for-you': 'Made For You',
+  /** Mixes assembled here from the listener's most played songs. Items have kind 'mix'. */
+  'top-mixes': 'Your Top Mixes',
+  /** Latest albums and singles from artists the listener follows or plays most. */
+  'new-releases': 'New Releases For You',
+  /** Recently played songs. Items have kind 'track'. */
   recent: 'Recently Played',
-  'top-picks': 'Top Picks',
-  'heavy-rotation': 'Heavy Rotation',
-  'new-from-artists': 'New From Your Artists',
+  'favourite-artists': 'Your Favourite Artists',
+  /** The listener's playlists, without the Spotify-made ones shown above. */
   playlists: 'Your Playlists',
 } as const;
 export type ShelfId = keyof typeof SHELVES;

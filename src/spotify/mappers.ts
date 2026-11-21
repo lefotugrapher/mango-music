@@ -1,4 +1,4 @@
-import type { Album, AlbumRef, Artist, ArtistRef, Image, ItemKind, Playlist, ShelfItem, Track } from '../domain/types';
+import type { Album, AlbumRef, Artist, ArtistRef, Image, ItemKind, Mix, Playlist, ShelfItem, Track } from '../domain/types';
 import type {
   RawAlbum,
   RawArtist,
@@ -100,7 +100,11 @@ export function toPlaylist(raw: RawPlaylist): Playlist {
 
 const names = (artists: RawArtistRef[] | undefined) => (artists ?? []).map((a) => a.name).join(', ');
 
-export function toShelfItem(raw: RawAlbum | RawArtist | RawPlaylist | RawTrack, kind: ItemKind): ShelfItem {
+/** Mixes are assembled by the app, so they have no raw form. */
+export function toShelfItem(
+  raw: RawAlbum | RawArtist | RawPlaylist | RawTrack,
+  kind: Exclude<ItemKind, 'mix'>,
+): ShelfItem {
   let subtitle: string;
   let images: Image[];
   switch (kind) {
@@ -127,6 +131,29 @@ export function toShelfItem(raw: RawAlbum | RawArtist | RawPlaylist | RawTrack, 
   }
   const image = images[0];
   return { kind, id: raw.id ?? '', uri: raw.uri, title: raw.name, subtitle, ...(image ? { image } : {}) };
+}
+
+export function mixToShelfItem(mix: Mix): ShelfItem {
+  return {
+    kind: 'mix',
+    id: mix.id,
+    uri: `mango:mix:${mix.id}`,
+    title: mix.title,
+    subtitle: mix.description,
+    ...(mix.image ? { image: mix.image } : {}),
+  };
+}
+
+export function playlistToShelfItem(p: Playlist, subtitle?: string): ShelfItem {
+  const image = p.images[0];
+  return {
+    kind: 'playlist',
+    id: p.id,
+    uri: p.uri,
+    title: p.name,
+    subtitle: subtitle ?? (p.ownerName || 'Playlist'),
+    ...(image ? { image } : {}),
+  };
 }
 
 export function sdkTrackToTrack(raw: WebPlaybackTrack, fallbackDurationMs = 0): Track {

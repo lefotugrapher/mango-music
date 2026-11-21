@@ -1,7 +1,7 @@
 type Loc = Pick<Location, 'protocol' | 'hostname' | 'port' | 'pathname'>;
 
 export type RedirectInfo = {
-  /** The redirect URI for the page Pane is being served from. */
+  /** The redirect URI for the page Mango Music is being served from. */
   uri: string;
   /** Why Spotify would refuse that URI, if it would. */
   problem: null | 'localhost' | 'insecure';

@@ -20,6 +20,11 @@ const typeId = (value: string) =>
   fireEvent.change(screen.getByRole('textbox', { name: 'Client ID' }), { target: { value } });
 
 describe('Setup, signing in when a Client ID is already known', () => {
+  it('is titled Mango Music', () => {
+    setup({ clientId: VALID_ID });
+    expect(screen.getByRole('heading', { level: 1, name: 'Mango Music' })).toBeInTheDocument();
+  });
+
   it('is a single button: no Client ID field, no setup steps', async () => {
     const { onConnect } = setup({ clientId: VALID_ID });
     expect(screen.queryByRole('textbox', { name: 'Client ID' })).toBeNull();

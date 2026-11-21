@@ -1,6 +1,6 @@
 /**
  * Raw Spotify shapes (verified against the reference pages, Nov 2026).
- * Only the fields Pane reads are typed; everything Spotify may omit or null is optional.
+ * Only the fields Mango Music reads are typed; everything Spotify may omit or null is optional.
  *
  * Library:  PUT /me/library?uris=a,b (save) and DELETE /me/library?uris=a,b (remove).
  *           `uris` is a QUERY parameter, comma-separated, max 40 per call, no body.
@@ -69,6 +69,9 @@ export type RawPlaylist = {
 
 export type RawPlaylistItem = { added_at?: string | null; is_local?: boolean; item?: RawTrack | null; track?: RawTrack | null };
 export type RawPlaylistDetail = RawPlaylist & { items?: RawPaging<RawPlaylistItem> };
+
+/** One element of GET /me/player/recently-played; context is null for plays from search, queue, etc. */
+export type RawPlayHistory = { track?: RawTrack | null; played_at?: string; context?: { uri?: string | null; type?: string } | null };
 
 export type RawMe = { id: string; display_name?: string | null; images?: RawImage[] | null };
 

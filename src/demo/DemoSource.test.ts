@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NotFoundError } from '../domain/types';
+import { NotFoundError, SHELVES, type ShelfId } from '../domain/types';
 import { createDemoLibrary, resolveTracks } from './library';
 import { createDemoSource } from './DemoSource';
 
@@ -27,6 +27,10 @@ describe('createDemoLibrary', () => {
     expect(lib.tracks.some((t) => t.explicit)).toBe(true);
     expect(new Set(lib.albums.map((a) => a.albumType))).toEqual(new Set(['album', 'single']));
   });
+  it('resolves mix uris to the mix tracks', () => {
+    const mix = lib.mixes[0]!;
+    expect(resolveTracks(lib, `mango:mix:${mix.id}`)).toEqual(mix.tracks);
+  });
   it('resolves uris to tracks', () => {
     const a = lib.albums[0]!;
     expect(resolveTracks(lib, a.uri)).toEqual(a.tracks);
@@ -40,18 +44,63 @@ describe('createDemoLibrary', () => {
 describe('createDemoSource', () => {
   const src = createDemoSource(lib);
 
-  it('home returns the five shelves in order', async () => {
+  it('home returns all seven shelves in SHELVES order with their titles', async () => {
     const shelves = await src.home();
-    expect(shelves.map((s) => s.id)).toEqual(['recent', 'top-picks', 'heavy-rotation', 'new-from-artists', 'playlists']);
-    expect(shelves.map((s) => s.title)).toEqual([
-      'Recently Played', 'Top Picks', 'Heavy Rotation', 'New From Your Artists', 'Your Playlists',
-    ]);
+    const ids = Object.keys(SHELVES) as ShelfId[];
+    expect(shelves.map((s) => s.id)).toEqual(ids);
+    expect(shelves.map((s) => s.title)).toEqual(ids.map((id) => SHELVES[id]));
     for (const s of shelves) expect(s.items.length).toBeGreaterThan(0);
+  });
+
+  it('uses the item kinds and uri forms of the real source', async () => {
+    const byId = Object.fromEntries((await src.home()).map((s) => [s.id, s.items]));
+    expect(byId['recent']!.every((i) => i.kind === 'track')).toBe(true);
+    expect(byId['top-mixes']!.every((i) => i.kind === 'mix' && i.uri === `mango:mix:${i.id}`)).toBe(true);
+    expect(byId['top-mixes']!.map((i) => i.id).slice(0, 3)).toEqual(['on-repeat', 'top-songs', 'all-time']);
+    expect(byId['top-mixes']!.length).toBe(5);
+    expect(byId['favourite-artists']!.every((i) => i.kind === 'artist')).toBe(true);
+    expect(byId['new-releases']!.every((i) => i.kind === 'album')).toBe(true);
+    const kinds = new Set(byId['jump-back-in']!.map((i) => i.kind));
+    expect(kinds.has('album') && kinds.has('playlist')).toBe(true);
+  });
+
+  it('made-for-you holds only the Spotify-made playlists, which are absent from playlists and have no tracks', async () => {
+    const shelves = await src.home();
+    const made = shelves.find((s) => s.id === 'made-for-you')!;
+    const mine = shelves.find((s) => s.id === 'playlists')!;
+    expect(made.items.length).toBeGreaterThanOrEqual(3);
+    const spotifyOwned = lib.playlists.filter((p) => p.playlist.ownerName === 'Spotify' && !p.owned);
+    expect(made.items.map((i) => i.id)).toEqual(spotifyOwned.map((p) => p.playlist.id));
+    expect(made.items.every((i) => i.kind === 'playlist' && i.subtitle === 'Made for you by Spotify')).toBe(true);
+    for (const i of made.items) {
+      expect(mine.items.map((x) => x.id)).not.toContain(i.id);
+      expect((await src.playlist(i.id)).tracks).toBeNull();
+    }
+    expect(mine.items.map((i) => i.title)).toContain('Studio Collective Picks');
+  });
+
+  it('mix() works for every item on top-mixes and rejects unknown ids', async () => {
+    const shelf = (await src.home()).find((s) => s.id === 'top-mixes')!;
+    for (const item of shelf.items) {
+      const mix = await src.mix(item.id);
+      expect(mix).toMatchObject({ id: item.id, title: item.title });
+      expect(mix.tracks.length).toBeGreaterThan(0);
+    }
+    for (const id of ['on-repeat', 'top-songs', 'all-time']) {
+      const n = (await src.mix(id)).tracks.length;
+      expect(n).toBeGreaterThanOrEqual(20);
+      expect(n).toBeLessThanOrEqual(40);
+    }
+    await expect(src.mix('nope')).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('is deterministic across home() calls', async () => {
+    expect(await src.home()).toEqual(await src.home());
   });
 
   it('playlists: owned has tracks, foreign is null', async () => {
     const own = lib.playlists.find((p) => p.owned)!;
-    const foreign = lib.playlists.find((p) => !p.owned)!;
+    const foreign = lib.playlists.find((p) => !p.owned && p.playlist.ownerName !== 'Spotify')!;
     expect((await src.playlist(own.playlist.id)).tracks).toBeInstanceOf(Array);
     expect((await src.playlist(foreign.playlist.id)).tracks).toBeNull();
   });

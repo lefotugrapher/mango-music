@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sdkTrackToTrack, toAlbum, toAlbumRef, toArtist, toPlaylist, toShelfItem, toTrack } from './mappers';
+import { mixToShelfItem, playlistToShelfItem, sdkTrackToTrack, toAlbum, toAlbumRef, toArtist, toPlaylist, toShelfItem, toTrack } from './mappers';
 import type { RawAlbum, RawArtist, RawPlaylist, RawTrack, WebPlaybackTrack } from './raw';
 
 const rawAlbum: RawAlbum = {
@@ -113,6 +113,32 @@ describe('toShelfItem subtitles', () => {
     const s = toShelfItem(rawTrack, 'track');
     expect(s.subtitle).toBe('Ann');
     expect(s.image?.url).toBe('http://img/1');
+  });
+});
+
+describe('mixToShelfItem', () => {
+  it('uses the mango:mix uri, the description as subtitle and the given image', () => {
+    const mix = { id: 'artist:ar1', title: 'Ann Mix', description: 'Built from what you play', image: { url: 'http://i' }, tracks: [] };
+    expect(mixToShelfItem(mix)).toEqual({
+      kind: 'mix', id: 'artist:ar1', uri: 'mango:mix:artist:ar1', title: 'Ann Mix',
+      subtitle: 'Built from what you play', image: { url: 'http://i' },
+    });
+  });
+  it('omits image when the mix has none', () => {
+    expect(mixToShelfItem({ id: 'x', title: 'X', description: 'd', tracks: [] })).not.toHaveProperty('image');
+  });
+});
+
+describe('playlistToShelfItem', () => {
+  const base = toPlaylist({ id: 'p', uri: 'spotify:playlist:p', name: 'P', images: [{ url: 'http://i' }], owner: { id: 'u', display_name: 'Una' } });
+  it('defaults the subtitle to the owner name, then to Playlist', () => {
+    expect(playlistToShelfItem(base)).toEqual({
+      kind: 'playlist', id: 'p', uri: 'spotify:playlist:p', title: 'P', subtitle: 'Una', image: { url: 'http://i' },
+    });
+    expect(playlistToShelfItem({ ...base, ownerName: '' }).subtitle).toBe('Playlist');
+  });
+  it('takes an explicit subtitle', () => {
+    expect(playlistToShelfItem(base, 'Made for you by Spotify').subtitle).toBe('Made for you by Spotify');
   });
 });
 

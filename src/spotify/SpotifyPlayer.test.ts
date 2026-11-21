@@ -103,8 +103,8 @@ afterEach(() => {
 });
 
 describe('construction and ready', () => {
-  it('creates the SDK player named Pane, supplying tokens from getToken', async () => {
-    expect(t.opts().name).toBe('Pane');
+  it('creates the SDK player named Mango Music, supplying tokens from getToken', async () => {
+    expect(t.opts().name).toBe('Mango Music');
     const tokens: string[] = [];
     t.opts().getOAuthToken((tok) => tokens.push(tok));
     await t.flush();
@@ -136,7 +136,7 @@ describe('construction and ready', () => {
     // Anything else here is transient and must not claim the sign-in expired.
     expect(bad.getState().error).toEqual({
       kind: 'playback',
-      message: "Pane couldn't reach Spotify to start the player. Check your connection.",
+      message: "Mango Music couldn't reach Spotify to start the player. Check your connection.",
     });
     bad.dispose();
   });
@@ -254,7 +254,7 @@ describe('player_state_changed', () => {
 describe('SDK errors', () => {
   it.each([
     ['account_error', 'premium_required', 'Playback needs Spotify Premium. You can still browse.'],
-    ['initialization_error', 'unsupported_browser', "This browser can't play protected audio. Pick another device, or open Pane in Chrome."],
+    ['initialization_error', 'unsupported_browser', "This browser can't play protected audio. Pick another device, or open Mango Music in Chrome."],
     ['authentication_error', 'auth', "Spotify wouldn't start the player with this sign-in (raw). Reconnect to fix it."],
   ] as const)('%s -> %s', async (event, kind, message) => {
     await t.emit(event, { message: 'raw' });
@@ -391,7 +391,7 @@ describe('devices', () => {
     t = setup({
       'get /me/player/devices': {
         devices: [
-          { id: 'dev1', is_active: true, name: 'Pane', type: 'Computer' },
+          { id: 'dev1', is_active: true, name: 'Mango Music', type: 'Computer' },
           { id: 'phone', is_active: false, name: 'Phone', type: 'Smartphone' },
           { id: null, is_active: false, name: 'Restricted', type: 'Speaker' },
         ],
@@ -401,7 +401,7 @@ describe('devices', () => {
     await ready('dev1');
     await p.refreshDevices();
     expect(p.getState().devices).toEqual([
-      { id: 'dev1', name: 'Pane', type: 'Computer', active: true, isThisBrowser: true },
+      { id: 'dev1', name: 'Mango Music', type: 'Computer', active: true, isThisBrowser: true },
       { id: 'phone', name: 'Phone', type: 'Smartphone', active: false, isThisBrowser: false },
     ]);
   });

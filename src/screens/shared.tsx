@@ -3,7 +3,7 @@ import { GearSix } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router';
 import type { AlbumRef, Image, ShelfItem } from '../domain/types';
 import { usePalette } from '../nowplaying/palette';
-import { usePlayer } from '../session/hooks';
+import { usePlayer, useSource } from '../session/hooks';
 import { Artwork } from '../ui/Artwork';
 import { Card } from '../ui/Card';
 import './screens.css';
@@ -15,7 +15,8 @@ export function useOpenItem() {
   return useCallback(
     (item: ShelfItem) => {
       if (item.kind === 'track') void player.play({ uris: [item.uri] });
-      else void navigate(`/${item.kind}/${item.id}`);
+      // Mix ids contain a colon ("artist:<id>"), so the id is always encoded.
+      else void navigate(`/${item.kind}/${encodeURIComponent(item.id)}`);
     },
     [navigate, player],
   );
@@ -23,11 +24,26 @@ export function useOpenItem() {
 
 export function usePlayItem() {
   const player = usePlayer();
+  const source = useSource();
   return useCallback(
     (item: ShelfItem) => {
+      if (item.kind === 'mix') {
+        // A mix exists only here, so Spotify cannot be asked to play it by
+        // name: fetch its songs and play those.
+        void source
+          .mix(item.id)
+          .then((mix) => {
+            const uris = mix.tracks.filter((track) => track.playable).map((track) => track.uri);
+            if (uris.length > 0) return player.play({ uris, index: 0 });
+          })
+          .catch(() => {
+            // Opening the mix shows the reason; a card has nowhere to put one.
+          });
+        return;
+      }
       void player.play(item.kind === 'track' ? { uris: [item.uri] } : { contextUri: item.uri });
     },
-    [player],
+    [player, source],
   );
 }
 

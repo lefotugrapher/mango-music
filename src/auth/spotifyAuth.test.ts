@@ -374,7 +374,7 @@ describe('scopes', () => {
 describe('needsNewConsent', () => {
   const tokens = { accessToken: 'A', refreshToken: 'R', expiresAt: NOW };
 
-  it('is false when every permission Pane needs was granted', () => {
+  it('is false when every permission Mango Music needs was granted', () => {
     expect(needsNewConsent({ ...tokens, scope: SCOPES.join(' ') })).toBe(false);
     expect(needsNewConsent({ ...tokens, scope: [...SCOPES].reverse().join(' ') + ' something-extra' })).toBe(false);
   });

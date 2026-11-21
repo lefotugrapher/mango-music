@@ -136,14 +136,14 @@ describe('App', () => {
     expect(d.beginLogin).toHaveBeenCalledWith(VALID_ID, ROOT);
   });
 
-  it('asks for consent again when the stored sign-in lacks a permission Pane now needs', async () => {
+  it('asks for consent again when the stored sign-in lacks a permission Mango Music now needs', async () => {
     localStorage.setItem('pane.clientId', JSON.stringify(VALID_ID));
-    // Tokens from before Pane asked for user-read-email: the API works, the player does not.
+    // Tokens from before Mango Music asked for user-read-email: the API works, the player does not.
     localStorage.setItem('pane.tokens', JSON.stringify({ accessToken: 'a', refreshToken: 'r', expiresAt: 1 }));
     const d = deps();
     render(<App deps={d} />);
     expect(
-      await screen.findByText('Pane needs one more permission from Spotify to play music here. Continue with Spotify to grant it.'),
+      await screen.findByText('Mango Music needs one more permission from Spotify to play music here. Continue with Spotify to grant it.'),
     ).toHaveAttribute('role', 'status');
     expect(d.createSpotifySession).not.toHaveBeenCalled();
     expect(localStorage.getItem('pane.tokens')).toBeNull();
@@ -246,7 +246,7 @@ describe('App', () => {
     remember();
     const d = deps({ createSpotifySession: vi.fn(async () => Promise.reject(new Error('boom'))) });
     render(<App deps={d} />);
-    expect(await screen.findByText("Pane couldn't start Spotify. Try connecting again.")).toHaveAttribute('role', 'status');
+    expect(await screen.findByText("Mango Music couldn't start Spotify. Try connecting again.")).toHaveAttribute('role', 'status');
   });
 
   it('keeps browsing available and says why when playback needs Premium', async () => {
