@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { afterEach } from 'vitest';
+import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
 // jsdom has no layout engine and lacks these browser APIs.
@@ -24,6 +24,7 @@ afterEach(() => {
   document.documentElement.removeAttribute('data-theme');
   document.documentElement.removeAttribute('data-reduce-motion');
   window.matchMedia = defaultMatchMedia;
+  vi.unstubAllGlobals();
 });
 
 class NoopObserver {
