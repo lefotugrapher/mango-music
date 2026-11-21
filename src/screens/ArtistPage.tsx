@@ -4,7 +4,6 @@ import { useParams } from 'react-router';
 import { usePlayer, useSource } from '../session/hooks';
 import { EmptyState } from '../ui/EmptyState';
 import { Shelf } from '../ui/Shelf';
-import { SpotifyAttribution } from '../ui/SpotifyAttribution';
 import { albumToItem, DetailHeader, Loading, useOpenItem, usePlayItem, useTintStyle } from './shared';
 
 /**
@@ -57,10 +56,6 @@ export function ArtistPage() {
       {albums.length === 0 && singles.length === 0 && (
         <p className="detail__note">No releases to show for this artist.</p>
       )}
-
-      <footer className="detail__footer">
-        <SpotifyAttribution href={artist.externalUrl} />
-      </footer>
     </article>
   );
 }

@@ -483,27 +483,6 @@
   padding: 0 4px;
 }
 
-/* ---------- Spotify attribution ---------- */
-.spotify-attr {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--fs-caption);
-  font-weight: 600;
-  color: var(--text-secondary);
-  border-radius: 6px;
-}
-
-.spotify-attr svg {
-  width: 18px;
-  height: 18px;
-  color: #1ed760;
-}
-
-.spotify-attr:hover {
-  color: var(--text);
-}
-
 /* ---------- Empty state ---------- */
 .empty {
   display: flex;

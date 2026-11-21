@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { FALLBACK_PALETTE, pickPalette } from './palette';
-import { spotifyUrl } from '../lib/spotifyUrl';
 
 const pixels = (...rgba: number[][]) => new Uint8ClampedArray(rgba.flat());
 const repeat = (px: number[], n: number) => Array.from({ length: n }, () => px);
@@ -31,20 +30,5 @@ describe('pickPalette', () => {
   it('falls back when there is nothing to sample', () => {
     expect(pickPalette(new Uint8ClampedArray(0))).toEqual(FALLBACK_PALETTE);
     expect(pickPalette(pixels(...repeat([10, 20, 30, 0], 4)))).toEqual(FALLBACK_PALETTE);
-  });
-});
-
-describe('spotifyUrl', () => {
-  it('turns a Spotify URI into its open.spotify.com page', () => {
-    expect(spotifyUrl('spotify:track:4uLU6hMCjMI75M1A2tKUQC')).toBe(
-      'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC',
-    );
-    expect(spotifyUrl('spotify:album:abc')).toBe('https://open.spotify.com/album/abc');
-  });
-
-  it('falls back to the Spotify home page for anything else', () => {
-    expect(spotifyUrl('demo:track:t1')).toBe('https://open.spotify.com/');
-    expect(spotifyUrl('spotify:local:x:y:z')).toBe('https://open.spotify.com/');
-    expect(spotifyUrl('spotify:track:../../evil')).toBe('https://open.spotify.com/');
   });
 });

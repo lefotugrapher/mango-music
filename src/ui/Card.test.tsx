@@ -6,7 +6,6 @@ import { Card } from './Card';
 import { EmptyState } from './EmptyState';
 import { IconButton } from './IconButton';
 import { Shelf } from './Shelf';
-import { SpotifyAttribution } from './SpotifyAttribution';
 import { makeItem } from '../test/fixtures';
 
 describe('Artwork', () => {
@@ -71,16 +70,6 @@ describe('Shelf', () => {
   it('renders nothing at all when it has no items', () => {
     const { container } = render(<Shelf title="Recently Played" items={[]} onOpen={() => {}} />);
     expect(container).toBeEmptyDOMElement();
-  });
-});
-
-describe('SpotifyAttribution', () => {
-  it('links back to Spotify in a new tab without leaking the referrer', () => {
-    render(<SpotifyAttribution href="https://open.spotify.com/album/1" />);
-    const link = screen.getByRole('link', { name: /Open in Spotify/ });
-    expect(link).toHaveAttribute('href', 'https://open.spotify.com/album/1');
-    expect(link).toHaveAttribute('target', '_blank');
-    expect(link.getAttribute('rel')).toContain('noreferrer');
   });
 });
 

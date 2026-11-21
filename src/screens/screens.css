@@ -233,10 +233,6 @@
   font-size: var(--fs-body);
 }
 
-.detail__footer .spotify-attr {
-  margin-top: 8px;
-}
-
 @media (max-width: 1023px) {
   .detail {
     padding-top: calc(24px + env(safe-area-inset-top, 0px));

@@ -124,7 +124,7 @@ describe('NowPlayingSheet', () => {
     renderApp(<NowPlayingSheet open onClose={() => {}} />, { session });
     const dialog = within(screen.getByRole('dialog'));
     expect(dialog.getByRole('heading', { name: first.name })).toBeInTheDocument();
-    expect(dialog.getByRole('link', { name: /Open in Spotify/ })).toBeInTheDocument();
+    expect(dialog.queryByRole('link', { name: /Open in Spotify/ })).not.toBeInTheDocument();
     expect(document.querySelector('.np__art [data-shape]')).toHaveAttribute('data-shape', 'square');
   });
 

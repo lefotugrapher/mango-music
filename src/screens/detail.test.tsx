@@ -56,9 +56,10 @@ describe('AlbumPage', () => {
     expect(await screen.findByRole('button', { name: 'Remove from Library' })).toBeInTheDocument();
   });
 
-  it('links back to Spotify and keeps the cover square', async () => {
+  it('keeps the cover square and shows no Spotify link', async () => {
     renderApp(routes, { route: `/album/${album.id}` });
-    expect(await screen.findByRole('link', { name: /Open in Spotify/ })).toHaveAttribute('href', album.externalUrl);
+    await screen.findByRole('button', { name: 'Play' });
+    expect(screen.queryByRole('link', { name: /Open in Spotify/ })).not.toBeInTheDocument();
     expect(document.querySelector('.detail__art [data-shape]')).toHaveAttribute('data-shape', 'square');
   });
 

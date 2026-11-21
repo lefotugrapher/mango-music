@@ -100,7 +100,7 @@ Dependencies are installed with install scripts disabled (see `.npmrc`).
 
 Using Pane with your Spotify account means your developer app is bound by the [Spotify Developer Terms](https://developer.spotify.com/terms) and [Developer Policy](https://developer.spotify.com/policy). Pane is for personal, non-commercial use. Spotify's policy restricts apps that replace its own client; whether to run one against your account is your call.
 
-Pane contains no Apple code, fonts, icons or artwork, and no Spotify code or artwork. The Spotify mark shown beside "Open in Spotify" and on the sign-in button comes from the open-source Phosphor icon set. Music, artwork and metadata shown while connected belong to Spotify and its licensors.
+Pane contains no Apple code, fonts, icons or artwork, and no Spotify code or artwork. The Spotify mark on the sign-in button comes from the open-source Phosphor icon set. Music, artwork and metadata shown while connected belong to Spotify and its licensors.
 
 ## Licence
 

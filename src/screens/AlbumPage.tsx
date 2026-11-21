@@ -5,7 +5,6 @@ import { formatDuration } from '../lib/format';
 import { usePlayer, usePlayerState, useSource } from '../session/hooks';
 import { EmptyState } from '../ui/EmptyState';
 import { IconButton } from '../ui/IconButton';
-import { SpotifyAttribution } from '../ui/SpotifyAttribution';
 import { TrackRow } from '../ui/TrackRow';
 import { DetailHeader, Loading, useTintStyle } from './shared';
 
@@ -107,7 +106,6 @@ export function AlbumPage() {
           {data.tracks.length} {data.tracks.length === 1 ? 'song' : 'songs'}, {formatDuration(total)}
         </p>
         {data.copyright && <p>{data.copyright}</p>}
-        <SpotifyAttribution href={data.externalUrl} />
       </footer>
     </article>
   );

@@ -1,11 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { CaretDown, ListBullets, Screencast, SpeakerHigh, SpeakerNone } from '@phosphor-icons/react';
 import { formatDuration } from '../lib/format';
-import { spotifyUrl } from '../lib/spotifyUrl';
 import { Artwork } from '../ui/Artwork';
 import { IconButton } from '../ui/IconButton';
 import { Slider } from '../ui/Slider';
-import { SpotifyAttribution } from '../ui/SpotifyAttribution';
 import { DevicePicker } from './DevicePicker';
 import { MeshBackground } from './MeshBackground';
 import { usePalette } from './palette';
@@ -131,7 +129,6 @@ function Sheet({ onClose }: { onClose: () => void }) {
             <IconButton label="Devices" pressed={panel === 'devices'} onClick={() => toggle('devices')}>
               <Screencast weight="bold" aria-hidden="true" />
             </IconButton>
-            {track && <SpotifyAttribution href={spotifyUrl(track.uri)} />}
             <IconButton label="Queue" pressed={panel === 'queue'} onClick={() => toggle('queue')}>
               <ListBullets weight="bold" aria-hidden="true" />
             </IconButton>

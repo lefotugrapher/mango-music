@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router';
 import { usePlayer, usePlayerState, useSource } from '../session/hooks';
 import { EmptyState } from '../ui/EmptyState';
-import { SpotifyAttribution } from '../ui/SpotifyAttribution';
 import { TrackRow } from '../ui/TrackRow';
 import { DetailHeader, Loading, useTintStyle } from './shared';
 
@@ -77,10 +76,6 @@ export function PlaylistPage() {
           ))}
         </ol>
       )}
-
-      <footer className="detail__footer">
-        <SpotifyAttribution href={data.externalUrl} />
-      </footer>
     </article>
   );
 }
