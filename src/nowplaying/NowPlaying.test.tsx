@@ -226,7 +226,8 @@ describe('NowPlayingSheet', () => {
     await userEvent.click(dialog.getByRole('button', { name: 'Devices' }));
     expect(refresh).toHaveBeenCalledTimes(1);
     const device = session.player.getState().devices[0]!;
-    await userEvent.click(await dialog.findByRole('button', { name: new RegExp(device.name) }));
+    // Named once: a device already called "This browser" is not labelled twice.
+    await userEvent.click(await dialog.findByRole('button', { name: device.name }));
     expect(transfer).toHaveBeenCalledWith(device.id);
   });
 

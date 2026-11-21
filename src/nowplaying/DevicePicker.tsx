@@ -11,7 +11,9 @@ function DeviceIcon({ type }: { type: string }) {
   return <Desktop aria-hidden="true" />;
 }
 
-const describe = (device: Device) => (device.isThisBrowser ? `${device.name} · This browser` : device.name);
+const HERE = 'This browser';
+const describe = (device: Device) =>
+  device.isThisBrowser && device.name !== HERE ? `${device.name} · ${HERE}` : device.name;
 
 /** Spotify Connect devices. Opening the picker asks Spotify for a fresh list. */
 export function DevicePicker() {
