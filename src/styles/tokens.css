@@ -1,0 +1,136 @@
+/*
+ * Design tokens. Values marked "measured" come from
+ * docs/reference/apple-music-web-measurements.md.
+ */
+:root {
+  color-scheme: light dark;
+
+  --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --accent: #fa2d48;
+  --accent-contrast: #ffffff;
+
+  /* Light (measured) */
+  --bg: #ffffff;
+  --bg-elevated: #f5f5f7;
+  --text: rgba(0, 0, 0, 0.88);
+  --text-secondary: rgba(0, 0, 0, 0.56);
+  --text-tertiary: rgba(0, 0, 0, 0.4);
+  --text-muted: rgb(134, 134, 139);
+  --separator: rgba(0, 0, 0, 0.1);
+  --fill-selected: rgba(31, 31, 31, 0.04);
+  --fill-hover: rgba(31, 31, 31, 0.06);
+  --fill-control: rgba(118, 118, 128, 0.12);
+  --artwork-placeholder: #e8e8ed;
+
+  --glass-fill: rgba(245, 245, 247, 0.55);
+  --glass-fill-clear: rgba(245, 245, 247, 0.22);
+  --glass-fill-solid: #f5f5f7;
+  --glass-border: rgba(0, 0, 0, 0.05);
+  --glass-rim: rgba(255, 255, 255, 0.9);
+  --glass-rim-shade: rgba(0, 0, 0, 0.1);
+  --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  --glass-chip: rgba(255, 255, 255, 0.6);
+
+  --shadow-cover: 0 3px 10px rgba(0, 0, 0, 0.23);
+  --scrim: rgba(0, 0, 0, 0.3);
+
+  /* Radii */
+  --r-thumb: 5px;
+  --r-cover: 8px;
+  --r-cover-lg: 10px;
+  --r-row: 8px;
+  --r-card: 12px;
+  --r-bar: 28px;
+  --r-pill: 1000px;
+
+  /* Layout (measured) */
+  --sidebar-w: 260px;
+  --content-pad: 40px;
+  --player-h: 56px;
+  --player-w: 668px;
+  --tabbar-h: 56px;
+  --mini-h: 52px;
+
+  /* Type (measured) */
+  --fs-large-title: 34px;
+  --lh-large-title: 40px;
+  --fs-title: 26px;
+  --lh-title: 30px;
+  --fs-section: 17px;
+  --lh-section: 22px;
+  --fs-button: 15px;
+  --fs-nav: 14px;
+  --lh-nav: 20px;
+  --fs-body: 13px;
+  --lh-body: 16px;
+  --fs-caption: 12px;
+  --lh-caption: 15px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.44, 1);
+  --dur-fast: 160ms;
+  --dur: 320ms;
+}
+
+@media (max-width: 1023px) {
+  :root {
+    --content-pad: 20px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #1f1f1f;
+    --bg-elevated: #2a2a2c;
+    --text: rgba(255, 255, 255, 0.92);
+    --text-secondary: rgba(255, 255, 255, 0.64);
+    --text-tertiary: rgba(255, 255, 255, 0.4);
+    --text-muted: rgb(161, 161, 166);
+    --separator: rgba(255, 255, 255, 0.1);
+    --fill-selected: rgba(255, 255, 255, 0.05);
+    --fill-hover: rgba(255, 255, 255, 0.08);
+    --fill-control: rgba(118, 118, 128, 0.24);
+    --artwork-placeholder: #323234;
+
+    --glass-fill: rgba(38, 38, 40, 0.6);
+    --glass-fill-clear: rgba(38, 38, 40, 0.28);
+    --glass-fill-solid: #262628;
+    --glass-border: rgba(255, 255, 255, 0.05);
+    --glass-rim: rgba(255, 255, 255, 0.25);
+    --glass-rim-shade: rgba(0, 0, 0, 0.3);
+    --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    --glass-chip: rgba(255, 255, 255, 0.1);
+
+    --scrim: rgba(0, 0, 0, 0.5);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #1f1f1f;
+  --bg-elevated: #2a2a2c;
+  --text: rgba(255, 255, 255, 0.92);
+  --text-secondary: rgba(255, 255, 255, 0.64);
+  --text-tertiary: rgba(255, 255, 255, 0.4);
+  --text-muted: rgb(161, 161, 166);
+  --separator: rgba(255, 255, 255, 0.1);
+  --fill-selected: rgba(255, 255, 255, 0.05);
+  --fill-hover: rgba(255, 255, 255, 0.08);
+  --fill-control: rgba(118, 118, 128, 0.24);
+  --artwork-placeholder: #323234;
+
+  --glass-fill: rgba(38, 38, 40, 0.6);
+  --glass-fill-clear: rgba(38, 38, 40, 0.28);
+  --glass-fill-solid: #262628;
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --glass-rim: rgba(255, 255, 255, 0.25);
+  --glass-rim-shade: rgba(0, 0, 0, 0.3);
+  --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  --glass-chip: rgba(255, 255, 255, 0.1);
+
+  --scrim: rgba(0, 0, 0, 0.5);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
