@@ -47,17 +47,7 @@ function AddressProblem({ info }: { info: RedirectInfo }) {
  * person to Spotify's own page, which offers email and password, Google,
  * Apple and Facebook, and Spotify sends them back signed in.
  */
-function SignIn({
-  blocked,
-  onContinue,
-  onDemo,
-  onEdit,
-}: {
-  blocked: boolean;
-  onContinue: () => void;
-  onDemo: () => void;
-  onEdit: () => void;
-}) {
+function SignIn({ blocked, onContinue }: { blocked: boolean; onContinue: () => void }) {
   return (
     <div className="setup__signin">
       <button type="button" className="btn setup__spotify" disabled={blocked} onClick={onContinue}>
@@ -65,15 +55,9 @@ function SignIn({
         Continue with Spotify
       </button>
       <p className="setup__methods">
-        You sign in on Spotify's own page, with your email and password, Google, Apple or Facebook. Mango Music never sees
-        your password.
+        You sign in on Spotify's own page, with your email and password, Google, Apple or Facebook. Mango Music never
+        sees your password.
       </p>
-      <button type="button" className="btn setup__secondary" onClick={onDemo}>
-        Look around first
-      </button>
-      <button type="button" className="setup__link" onClick={onEdit}>
-        Use a different Client ID
-      </button>
     </div>
   );
 }
@@ -204,7 +188,7 @@ function ClientIdForm({
 
 export function Setup({ notice, clientId = null, editing = false, location = window.location, onConnect, onDemo }: Props) {
   const info = redirectUriFor(location);
-  const [showForm, setShowForm] = useState(editing || !clientId);
+  const [showForm] = useState(editing || !clientId);
   const blocked = info.problem !== null;
 
   return (
@@ -234,12 +218,7 @@ export function Setup({ notice, clientId = null, editing = false, location = win
             onDemo={onDemo}
           />
         ) : (
-          <SignIn
-            blocked={blocked}
-            onContinue={() => onConnect(clientId)}
-            onDemo={onDemo}
-            onEdit={() => setShowForm(true)}
-          />
+          <SignIn blocked={blocked} onContinue={() => onConnect(clientId)} />
         )}
 
         <p className="setup__foot">
