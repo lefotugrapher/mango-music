@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { NavLink } from 'react-router';
 import { Glass } from '../glass/Glass';
 import { useSource } from '../session/hooks';
-import { HOME_LINK, LIBRARY_LINKS, SEARCH_LINK, type NavEntry } from './nav';
+import { HOME_LINK, LIBRARY_LINKS, LIKED_LINK, SEARCH_LINK, type NavEntry } from './nav';
 import './shell.css';
 
 function Row({ entry }: { entry: NavEntry }) {
@@ -34,6 +34,7 @@ export function Sidebar() {
         <ul>
           <Row entry={SEARCH_LINK} />
           <Row entry={HOME_LINK} />
+          <Row entry={LIKED_LINK} />
         </ul>
 
         <h2 className="sidebar__heading">Library</h2>

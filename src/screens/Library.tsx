@@ -2,11 +2,11 @@ import { CaretRight } from '@phosphor-icons/react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { useSource } from '../session/hooks';
-import { LIBRARY_LINKS } from '../shell/nav';
+import { LIBRARY_LINKS, LIKED_LINK } from '../shell/nav';
 import { EmptyState } from '../ui/EmptyState';
 import { CardGrid, Loading, Page } from './shared';
 
-const SECTIONS = LIBRARY_LINKS.filter((link) => link.to !== '/library');
+const SECTIONS = [LIKED_LINK, ...LIBRARY_LINKS.filter((link) => link.to !== '/library')];
 
 export function Library() {
   const source = useSource();

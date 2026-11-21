@@ -31,12 +31,23 @@ describe('AppShell on a desktop-width window', () => {
       Playlists: '/library/playlists',
       Artists: '/library/artists',
       Albums: '/library/albums',
-      Songs: '/library/songs',
+      'Liked Songs': '/library/songs',
       Settings: '/settings',
     };
     for (const [name, href] of Object.entries(hrefs)) {
       expect(nav.getByRole('link', { name })).toHaveAttribute('href', href);
     }
+    // Spotify's liked songs go by the name people know, not a generic "Songs".
+    expect(nav.queryByRole('link', { name: 'Songs' })).toBeNull();
+  });
+
+  it('keeps Liked Songs near the top, right under Home', () => {
+    setDesktop(true);
+    renderApp(shell);
+    const names = within(screen.getByRole('navigation', { name: 'Sidebar' }))
+      .getAllByRole('link')
+      .map((link) => link.textContent);
+    expect(names.slice(0, 3)).toEqual(['Search', 'Home', 'Liked Songs']);
   });
 
   it("lists the user's playlists in the sidebar", async () => {

@@ -107,4 +107,17 @@ describe('createDemoSource', () => {
     expect((await src.me()).name).toEqual(expect.any(String));
     expect((await src.recentlyAdded()).length).toBeGreaterThan(0);
   });
+
+  it('reports how many songs are liked in total', async () => {
+    const src = createDemoSource();
+    const first = await src.librarySongs();
+    let count = first.items.length;
+    for (let next = first.next; next; ) {
+      const page = await src.librarySongs(next);
+      count += page.items.length;
+      next = page.next;
+    }
+    expect(first.total).toBe(count);
+    expect(first.total).toBeGreaterThan(first.items.length);
+  });
 });

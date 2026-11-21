@@ -95,7 +95,8 @@ export function createDemoSource(lib: DemoLibrary = createDemoLibrary()): MusicS
     },
 
     async librarySongs(cursor?: string) {
-      return paginate(lib.tracks.filter((t) => saved.has(t.uri)), LIBRARY_PAGE, cursor);
+      const liked = lib.tracks.filter((t) => saved.has(t.uri));
+      return { ...paginate(liked, LIBRARY_PAGE, cursor), total: liked.length };
     },
 
     async album(id) {

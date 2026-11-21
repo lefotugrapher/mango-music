@@ -50,6 +50,15 @@ beforeEach(() => {
   storage = window.localStorage;
 });
 
+describe('librarySongs() size', () => {
+  it("reports how many songs are liked in total, not just this page's", async () => {
+    const { client } = fakeClient({ '/me/tracks': { items: [{ track: track('1') }], next: 'more', total: 1240 } });
+    const page = await createSpotifySource({ client, storage }).librarySongs();
+    expect(page.total).toBe(1240);
+    expect(page.items).toHaveLength(1);
+  });
+});
+
 describe('home() when Spotify cannot be reached', () => {
   const fail = () => {
     throw new SpotifyError(0, 'network');

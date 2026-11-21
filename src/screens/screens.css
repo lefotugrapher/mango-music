@@ -804,3 +804,80 @@
   height: 46px;
   border-radius: 23px;
 }
+
+/* ---------- Liked Songs ---------- */
+.liked-art {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: inherit;
+  color: #fff;
+  background: linear-gradient(140deg, #ff5e7a 0%, var(--accent) 45%, #a01fd0 100%);
+}
+
+.liked-art svg {
+  width: 42%;
+  height: 42%;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+}
+
+.detail--liked .detail__art {
+  overflow: hidden;
+}
+
+.liked-tile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(360px, 100%);
+  margin-top: 16px;
+  padding: 10px 14px 10px 10px;
+  border-radius: 14px;
+  background: var(--fill-selected);
+  box-shadow: inset 0 0 0 0.5px var(--separator);
+  transition:
+    background var(--dur-fast) ease,
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.liked-tile:hover {
+  background: var(--fill-hover);
+}
+
+.liked-tile:active {
+  transform: scale(0.985);
+}
+
+.liked-tile .liked-art {
+  flex: none;
+  width: 52px;
+  border-radius: 9px;
+}
+
+.liked-tile__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.liked-tile__title {
+  font-size: var(--fs-section);
+  line-height: var(--lh-section);
+  font-weight: 700;
+}
+
+.liked-tile__count {
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--text-secondary);
+  white-space: pre;
+}
+
+.liked-tile__chevron {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--text-tertiary);
+}

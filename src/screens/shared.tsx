@@ -86,8 +86,11 @@ export function DetailHeader({
   description,
   actions,
   shape = 'square',
+  art,
 }: {
   image?: Image;
+  /** Shown in place of the image, for pages that have no artwork of their own. */
+  art?: ReactNode;
   title: string;
   subtitle?: ReactNode;
   meta?: string;
@@ -97,9 +100,7 @@ export function DetailHeader({
 }) {
   return (
     <header className="detail__header">
-      <div className="detail__art">
-        <Artwork image={image} alt="" shape={shape} radius={10} />
-      </div>
+      <div className="detail__art">{art ?? <Artwork image={image} alt="" shape={shape} radius={10} />}</div>
       <div className="detail__info">
         <h1 className="detail__title">{title}</h1>
         {subtitle && <div className="detail__subtitle">{subtitle}</div>}

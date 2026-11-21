@@ -38,8 +38,11 @@ export type Playlist = {
 };
 /** tracks is null when Spotify withholds the list (playlist not owned by the user). */
 export type PlaylistDetail = Playlist & { tracks: Track[] | null };
-/** next is an opaque cursor; pass it back unchanged to get the following page. */
-export type Page<T> = { items: T[]; next: string | null };
+/**
+ * next is an opaque cursor; pass it back unchanged to get the following page.
+ * total, when the source knows it, is the size of the whole list.
+ */
+export type Page<T> = { items: T[]; next: string | null; total?: number };
 export type ItemKind = 'album' | 'artist' | 'playlist' | 'track';
 export type ShelfItem = { kind: ItemKind; id: string; uri: string; title: string; subtitle: string; image?: Image };
 export type Shelf = { id: string; title: string; items: ShelfItem[] };

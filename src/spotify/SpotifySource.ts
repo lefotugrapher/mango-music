@@ -68,6 +68,7 @@ export function createSpotifySource(deps: { client: SpotifyClient; now?: () => n
       .map((x) => toTrack(x.track))
       .filter((t): t is Track => t !== null),
     next: nextOffset(raw, offset, PAGE),
+    total: typeof raw.total === 'number' ? raw.total : undefined,
   });
 
   // --- home shelves -------------------------------------------------------

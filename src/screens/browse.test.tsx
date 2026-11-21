@@ -89,6 +89,94 @@ describe('Home', () => {
   });
 });
 
+describe('Liked Songs', () => {
+  const songs = (n: number, from = 1): Track[] =>
+    Array.from({ length: n }, (_, i) => {
+      const id = `t${from + i}`;
+      return makeTrack({ id, uri: `test:track:${id}`, name: `Song ${from + i}` });
+    });
+  const uris = (tracks: Track[]) => tracks.map((t) => t.uri);
+
+  it('is one click from Home and shows how many there are', async () => {
+    const session = makeDemoSession();
+    vi.spyOn(session.source, 'librarySongs').mockResolvedValue({ items: songs(2), next: null, total: 312 });
+    renderApp(<Home />, { session });
+    // The count arrives with the first page of songs, a moment after the link.
+    const count = await screen.findByText('312 songs');
+    const link = screen.getByRole('link', { name: /Liked Songs/ });
+    expect(link).toHaveAttribute('href', '/library/songs');
+    expect(link).toContainElement(count);
+  });
+
+  it('has its own page, titled Liked Songs, with the full count', async () => {
+    const session = makeDemoSession();
+    vi.spyOn(session.source, 'librarySongs').mockResolvedValue({ items: songs(3), next: 'c1', total: 1240 });
+    renderApp(sectionRoutes, { session, route: '/library/songs' });
+    expect(await screen.findByRole('heading', { name: 'Liked Songs' })).toBeInTheDocument();
+    expect(await screen.findByText('1,240 songs')).toBeInTheDocument();
+  });
+
+  it('plays from the top', async () => {
+    const session = makeDemoSession();
+    const tracks = songs(3);
+    vi.spyOn(session.source, 'librarySongs').mockResolvedValue({ items: tracks, next: null, total: 3 });
+    const play = vi.spyOn(session.player, 'play').mockResolvedValue();
+    renderApp(sectionRoutes, { session, route: '/library/songs' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Play' }));
+    expect(play).toHaveBeenCalledWith({ uris: uris(tracks), index: 0 });
+  });
+
+  it('shuffles across the whole collection, loading the rest of it first', async () => {
+    const session = makeDemoSession();
+    const first = songs(2);
+    const second = songs(2, 3);
+    const librarySongs = vi
+      .spyOn(session.source, 'librarySongs')
+      .mockImplementation(async (cursor) =>
+        cursor === 'c1' ? { items: second, next: null, total: 4 } : { items: first, next: 'c1', total: 4 },
+      );
+    const play = vi.spyOn(session.player, 'play').mockResolvedValue();
+    renderApp(sectionRoutes, { session, route: '/library/songs' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Shuffle' }));
+    await waitFor(() => expect(play).toHaveBeenCalledTimes(1));
+    expect(librarySongs).toHaveBeenCalledWith('c1');
+    const [target, options] = play.mock.calls[0]!;
+    expect(options).toEqual({ shuffle: true });
+    expect(new Set((target as { uris: string[] }).uris)).toEqual(new Set(uris([...first, ...second])));
+  });
+
+  it('never asks Spotify to play a song that is unavailable', async () => {
+    const session = makeDemoSession();
+    const tracks = songs(3);
+    tracks[1] = { ...tracks[1]!, playable: false };
+    vi.spyOn(session.source, 'librarySongs').mockResolvedValue({ items: tracks, next: null, total: 3 });
+    const play = vi.spyOn(session.player, 'play').mockResolvedValue();
+    renderApp(sectionRoutes, { session, route: '/library/songs' });
+    await userEvent.click(await screen.findByRole('button', { name: /Song 3/ }));
+    expect(play).toHaveBeenCalledWith({ uris: [tracks[0]!.uri, tracks[2]!.uri], index: 1 });
+  });
+
+  it('says so when no songs are liked yet, and offers nothing to play', async () => {
+    const session = makeDemoSession();
+    vi.spyOn(session.source, 'librarySongs').mockResolvedValue({ items: [], next: null, total: 0 });
+    renderApp(sectionRoutes, { session, route: '/library/songs' });
+    expect(await screen.findByRole('heading', { name: 'No liked songs yet' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Play' })).toBeDisabled();
+  });
+
+  it('explains a failure instead of looking empty, and can retry', async () => {
+    const session = makeDemoSession();
+    const librarySongs = vi
+      .spyOn(session.source, 'librarySongs')
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValue({ items: songs(1), next: null, total: 1 });
+    renderApp(sectionRoutes, { session, route: '/library/songs' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Retry' }));
+    expect(await screen.findByRole('button', { name: /Song 1/ })).toBeInTheDocument();
+    expect(librarySongs).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('Library', () => {
   it('links to its four sections even when nothing has been added yet', async () => {
     const session = makeDemoSession();
@@ -97,13 +185,14 @@ describe('Library', () => {
     expect(await screen.findByRole('heading', { name: 'Nothing added yet' })).toBeInTheDocument();
     const sections = within(screen.getByRole('navigation', { name: 'Library sections' }));
     for (const [name, href] of [
+      ['Liked Songs', '/library/songs'],
       ['Playlists', '/library/playlists'],
       ['Artists', '/library/artists'],
       ['Albums', '/library/albums'],
-      ['Songs', '/library/songs'],
     ] as const) {
       expect(sections.getByRole('link', { name })).toHaveAttribute('href', href);
     }
+    expect(sections.getAllByRole('link')[0]).toHaveTextContent('Liked Songs');
   });
 
   it('shows recently added items', async () => {

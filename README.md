@@ -8,9 +8,9 @@ Pane is a static web app. There is no server and nothing to sign up for: you con
 
 ![Home](docs/screenshots/home-dark.png)
 
-| Now Playing | Phone layout |
-| --- | --- |
-| ![Now Playing](docs/screenshots/now-playing.png) | ![Phone](docs/screenshots/phone.png) |
+| Liked Songs | Now Playing | Phone layout |
+| --- | --- | --- |
+| ![Liked Songs](docs/screenshots/liked-songs.png) | ![Now Playing](docs/screenshots/now-playing.png) | ![Phone](docs/screenshots/phone.png) |
 
 ## What you need
 
@@ -58,7 +58,8 @@ To let friends use your copy, add their Spotify accounts under **User Management
 ## What it does
 
 - Home shelves built from your listening: recently played, top picks, heavy rotation, new releases from artists you follow, and your playlists.
-- Your library: playlists, artists, albums, songs.
+- **Liked Songs**, one click from Home and the sidebar: every song you have liked on Spotify, with its count, Play and Shuffle.
+- Your library: playlists, artists and albums.
 - Search across songs, artists, albums and playlists.
 - Album, playlist and artist pages.
 - Playback in the browser, with a mini player, a full Now Playing view, the queue, shuffle, repeat, volume, and switching between your Spotify Connect devices.
@@ -72,6 +73,7 @@ Spotify removed or restricted several parts of its Web API for new apps in 2026.
 - No "top songs" on artist pages.
 - Track lists are only available for playlists you own or collaborate on. Other playlists still play; Pane shows a note in place of the list.
 - Search returns ten results per group at a time; **Show more** loads the next ten.
+- Spotify offers no documented way to say "play my liked songs", so Pane starts playback from a list of tracks. Play uses up to 500 songs around where you start. Shuffle draws 500 at random from your first 1,000 liked songs.
 
 ## Privacy
 
