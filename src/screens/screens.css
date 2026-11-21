@@ -1,6 +1,5 @@
 /* ---------- Page frame (measured: 34px title, 32px from the top) ---------- */
-.page,
-.detail {
+.page {
   max-width: 1500px;
 }
 
@@ -119,8 +118,20 @@
 }
 
 /* ---------- Detail pages (measured from the album page) ---------- */
+/*
+ * Detail pages bleed to the window edges so their colour wash runs under the
+ * glass sidebar, the way the reference tints the whole page from the cover.
+ */
 .detail {
-  padding-top: 44px;
+  min-height: 100%;
+  margin: 0 calc(-1 * var(--page-right)) calc(-1 * var(--page-bottom)) calc(-1 * var(--page-left));
+  padding: 44px var(--page-right) var(--page-bottom) var(--page-left);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--tint, transparent) 34%, var(--bg)) 0,
+    color-mix(in srgb, var(--tint, transparent) 12%, var(--bg)) 300px,
+    var(--bg) 620px
+  );
 }
 
 .detail__header {

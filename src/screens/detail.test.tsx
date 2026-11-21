@@ -62,6 +62,13 @@ describe('AlbumPage', () => {
     expect(document.querySelector('.detail__art [data-shape]')).toHaveAttribute('data-shape', 'square');
   });
 
+  it('takes a page tint from the artwork colours', async () => {
+    renderApp(routes, { route: `/album/${album.id}` });
+    await screen.findByRole('button', { name: 'Play' });
+    const page = document.querySelector<HTMLElement>('.detail')!;
+    expect(page.style.getPropertyValue('--tint')).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
   it('says so when the album cannot be found', async () => {
     const session = makeDemoSession();
     vi.spyOn(session.source, 'album').mockRejectedValue(new NotFoundError());

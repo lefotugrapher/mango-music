@@ -7,7 +7,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { IconButton } from '../ui/IconButton';
 import { SpotifyAttribution } from '../ui/SpotifyAttribution';
 import { TrackRow } from '../ui/TrackRow';
-import { DetailHeader, Loading } from './shared';
+import { DetailHeader, Loading, useTintStyle } from './shared';
 
 const TYPE_LABEL = { album: 'Album', single: 'Single', compilation: 'Compilation' } as const;
 
@@ -45,6 +45,7 @@ export function AlbumPage() {
   const player = usePlayer();
   const state = usePlayerState();
   const album = useQuery({ queryKey: ['album', id], queryFn: () => source.album(id) });
+  const tint = useTintStyle(album.data?.images[0]);
 
   if (album.isPending) return <Loading label="Loading album" />;
   if (album.isError) {
@@ -57,7 +58,7 @@ export function AlbumPage() {
   const meta = [data.albumType ? TYPE_LABEL[data.albumType] : null, year].filter(Boolean).join(' · ');
 
   return (
-    <article className="detail">
+    <article className="detail" style={tint}>
       <DetailHeader
         image={data.images[0]}
         title={data.name}

@@ -5,7 +5,7 @@ import { usePlayer, useSource } from '../session/hooks';
 import { EmptyState } from '../ui/EmptyState';
 import { Shelf } from '../ui/Shelf';
 import { SpotifyAttribution } from '../ui/SpotifyAttribution';
-import { albumToItem, DetailHeader, Loading, useOpenItem, usePlayItem } from './shared';
+import { albumToItem, DetailHeader, Loading, useOpenItem, usePlayItem, useTintStyle } from './shared';
 
 /**
  * Albums and singles only: Spotify removed the artist top-tracks endpoint for
@@ -18,6 +18,7 @@ export function ArtistPage() {
   const onOpen = useOpenItem();
   const onPlay = usePlayItem();
   const query = useQuery({ queryKey: ['artist', id], queryFn: () => source.artist(id) });
+  const tint = useTintStyle(query.data?.artist.images[0]);
 
   if (query.isPending) return <Loading label="Loading artist" />;
   if (query.isError) {
@@ -27,7 +28,7 @@ export function ArtistPage() {
   const { artist, albums, singles } = query.data;
 
   return (
-    <article className="detail detail--artist">
+    <article className="detail detail--artist" style={tint}>
       <DetailHeader
         image={artist.images[0]}
         shape="circle"

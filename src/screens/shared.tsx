@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { GearSix } from '@phosphor-icons/react';
 import { Link, useNavigate } from 'react-router';
 import type { AlbumRef, Image, ShelfItem } from '../domain/types';
+import { usePalette } from '../nowplaying/palette';
 import { usePlayer } from '../session/hooks';
 import { Artwork } from '../ui/Artwork';
 import { Card } from '../ui/Card';
@@ -38,6 +39,15 @@ export const albumToItem = (album: AlbumRef): ShelfItem => ({
   subtitle: album.releaseDate?.slice(0, 4) ?? album.artists.map((a) => a.name).join(', '),
   image: album.images[0],
 });
+
+/**
+ * A detail page takes a wash of colour from its artwork. Only the colour is
+ * used; the artwork itself is shown untouched.
+ */
+export function useTintStyle(image?: Image): CSSProperties {
+  const [tint] = usePalette(image?.url);
+  return { '--tint': tint } as CSSProperties;
+}
 
 export function Page({ title, children }: { title: string; children: ReactNode }) {
   return (

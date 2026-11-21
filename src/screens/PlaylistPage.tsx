@@ -5,7 +5,7 @@ import { usePlayer, usePlayerState, useSource } from '../session/hooks';
 import { EmptyState } from '../ui/EmptyState';
 import { SpotifyAttribution } from '../ui/SpotifyAttribution';
 import { TrackRow } from '../ui/TrackRow';
-import { DetailHeader, Loading } from './shared';
+import { DetailHeader, Loading, useTintStyle } from './shared';
 
 export function PlaylistPage() {
   const { id = '' } = useParams();
@@ -13,6 +13,7 @@ export function PlaylistPage() {
   const player = usePlayer();
   const state = usePlayerState();
   const playlist = useQuery({ queryKey: ['playlist', id], queryFn: () => source.playlist(id) });
+  const tint = useTintStyle(playlist.data?.images[0]);
 
   if (playlist.isPending) return <Loading label="Loading playlist" />;
   if (playlist.isError) {
@@ -26,7 +27,7 @@ export function PlaylistPage() {
   const empty = data.tracks !== null && data.tracks.length === 0;
 
   return (
-    <article className="detail">
+    <article className="detail" style={tint}>
       <DetailHeader
         image={data.images[0]}
         title={data.name}

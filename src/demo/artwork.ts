@@ -19,14 +19,15 @@ export function hashString(s: string): number {
   return h >>> 0;
 }
 
-// Hue offsets from the base hue; each keeps the palette harmonious.
+// Hue offsets from the base hue. Mostly neighbouring hues, so a cover reads as
+// one mood rather than a rainbow; two schemes add a single contrasting accent.
 const SCHEMES: number[][] = [
-  [0, 25, 50, 80],
-  [0, 30, 180, 210],
-  [0, 120, 240],
-  [0, 150, 210],
-  [0, 40, 160, 200],
-  [0, 60, 300],
+  [0, 18, 36, 54],
+  [0, -24, 24, 48],
+  [0, 30, 60],
+  [0, 40, -40],
+  [0, 22, 44, 190],
+  [0, -30, 160],
 ];
 
 const f = (n: number) => n.toFixed(1);
@@ -38,7 +39,7 @@ export function demoArtwork(seed: string): string {
   const scheme = SCHEMES[Math.floor(rnd() * SCHEMES.length)]!;
   const palette = scheme.map((off) => {
     const h = Math.round((baseHue + off + range(-8, 8) + 360) % 360);
-    return `hsl(${h} ${Math.round(range(62, 92))}% ${Math.round(range(42, 66))}%)`;
+    return `hsl(${h} ${Math.round(range(46, 72))}% ${Math.round(range(38, 62))}%)`;
   });
   const pick = (i: number) => palette[i % palette.length]!;
 
