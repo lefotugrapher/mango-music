@@ -19,7 +19,58 @@ function setup(props: Partial<Parameters<typeof Setup>[0]> = {}) {
 const typeId = (value: string) =>
   fireEvent.change(screen.getByRole('textbox', { name: 'Client ID' }), { target: { value } });
 
-describe('Setup', () => {
+describe('Setup, signing in when a Client ID is already known', () => {
+  it('is a single button: no Client ID field, no setup steps', async () => {
+    const { onConnect } = setup({ clientId: VALID_ID });
+    expect(screen.queryByRole('textbox', { name: 'Client ID' })).toBeNull();
+    expect(screen.queryByText(/Redirect URI/)).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Continue with Spotify' }));
+    expect(onConnect).toHaveBeenCalledWith(VALID_ID);
+  });
+
+  it('says where the sign-in happens and which ways of signing in Spotify offers', () => {
+    setup({ clientId: VALID_ID });
+    const note = screen.getByText(/Spotify's own page/);
+    expect(note).toHaveTextContent(/email and password/);
+    expect(note).toHaveTextContent(/Google/);
+    expect(note).toHaveTextContent(/Apple/);
+    expect(note).toHaveTextContent(/never sees your password/);
+  });
+
+  it('never asks for a password itself', () => {
+    setup({ clientId: VALID_ID });
+    expect(document.querySelector('input[type="password"]')).toBeNull();
+    expect(document.querySelector('input')).toBeNull();
+  });
+
+  it('lets the person switch to a different Client ID', async () => {
+    const { onConnect } = setup({ clientId: VALID_ID });
+    await userEvent.click(screen.getByRole('button', { name: 'Use a different Client ID' }));
+    expect(screen.getByRole('textbox', { name: 'Client ID' })).toHaveValue('');
+    typeId('fedcba9876543210fedcba9876543210');
+    await userEvent.click(screen.getByRole('button', { name: 'Continue with Spotify' }));
+    expect(onConnect).toHaveBeenCalledWith('fedcba9876543210fedcba9876543210');
+  });
+
+  it('still blocks signing in from an address Spotify refuses', () => {
+    setup({ clientId: VALID_ID, location: new URL('http://localhost:5173/') });
+    expect(screen.getByRole('alert')).toHaveTextContent(/localhost/);
+    expect(screen.getByRole('button', { name: 'Continue with Spotify' })).toBeDisabled();
+  });
+
+  it('starts the demo', async () => {
+    const { onDemo } = setup({ clientId: VALID_ID });
+    await userEvent.click(screen.getByRole('button', { name: 'Look around first' }));
+    expect(onDemo).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a notice passed from the app, such as a failed sign-in', () => {
+    setup({ clientId: VALID_ID, notice: 'Spotify sign-in was cancelled.' });
+    expect(screen.getByRole('status')).toHaveTextContent('Spotify sign-in was cancelled.');
+  });
+});
+
+describe('Setup, the one-time step when no Client ID is known', () => {
   it('shows the exact redirect URI to register and copies it', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     setup();
@@ -30,18 +81,30 @@ describe('Setup', () => {
     expect(await screen.findByText('Copied')).toBeInTheDocument();
   });
 
-  it('connects with a valid Client ID, tidied up', async () => {
+  it('says this only has to be done once', () => {
+    setup();
+    expect(screen.getByText(/only have to do this once/i)).toBeInTheDocument();
+  });
+
+  it('continues to Spotify with a valid Client ID, tidied up', async () => {
     const { onConnect } = setup();
     typeId(`  ${VALID_ID.toUpperCase()}  `);
-    await userEvent.click(screen.getByRole('button', { name: 'Connect Spotify' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Continue with Spotify' }));
     expect(onConnect).toHaveBeenCalledWith(VALID_ID);
   });
 
-  it('explains an invalid Client ID and does not connect', async () => {
+  it('explains an invalid Client ID and does not continue', async () => {
     const { onConnect } = setup();
     typeId('not-an-id');
-    await userEvent.click(screen.getByRole('button', { name: 'Connect Spotify' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Continue with Spotify' }));
     expect(screen.getByText("That doesn't look like a Client ID (32 letters and numbers).")).toBeInTheDocument();
+    expect(onConnect).not.toHaveBeenCalled();
+  });
+
+  it('asks for the Client ID when the field is left empty, rather than calling it invalid', async () => {
+    const { onConnect } = setup();
+    await userEvent.click(screen.getByRole('button', { name: 'Continue with Spotify' }));
+    expect(screen.getByText('Paste your Client ID first. Step 4 above shows where to find it.')).toBeInTheDocument();
     expect(onConnect).not.toHaveBeenCalled();
   });
 
@@ -50,37 +113,26 @@ describe('Setup', () => {
     expect(screen.getByText(/never paste your Client Secret/i)).toBeInTheDocument();
   });
 
-  it('on localhost, explains the problem, links to the loopback address, and blocks connecting', () => {
+  it('on localhost, explains the problem, links to the loopback address, and blocks continuing', () => {
     setup({ location: new URL('http://localhost:5173/') });
     expect(screen.getByRole('alert')).toHaveTextContent(/localhost/);
     expect(screen.getByRole('link', { name: 'http://127.0.0.1:5173/' })).toHaveAttribute(
       'href',
       'http://127.0.0.1:5173/',
     );
-    expect(screen.getByRole('button', { name: 'Connect Spotify' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Continue with Spotify' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Look around first' })).toBeEnabled();
   });
 
-  it('blocks connecting from an insecure address', () => {
+  it('blocks continuing from an insecure address', () => {
     setup({ location: new URL('http://192.168.1.5:5173/') });
     expect(screen.getByRole('alert')).toHaveTextContent(/HTTPS/);
-    expect(screen.getByRole('button', { name: 'Connect Spotify' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Continue with Spotify' })).toBeDisabled();
   });
 
-  it('starts the demo', async () => {
-    const { onDemo } = setup();
-    await userEvent.click(screen.getByRole('button', { name: 'Look around first' }));
-    expect(onDemo).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows a notice passed from the app, such as a failed sign-in', () => {
-    setup({ notice: 'Spotify sign-in was cancelled.' });
-    expect(screen.getByRole('status')).toHaveTextContent('Spotify sign-in was cancelled.');
-  });
-
-  it('pre-fills a remembered Client ID', () => {
-    setup({ defaultClientId: VALID_ID });
-    expect(screen.getByRole('textbox', { name: 'Client ID' })).toHaveValue(VALID_ID);
+  it('opens straight on the form when asked to change the Client ID', () => {
+    setup({ clientId: VALID_ID, editing: true });
+    expect(screen.getByRole('textbox', { name: 'Client ID' })).toBeInTheDocument();
   });
 });
 

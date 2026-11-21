@@ -36,6 +36,7 @@ function deps(overrides: Partial<AppDeps> & { href?: string } = {}): AppDeps {
   const { href = ROOT, ...rest } = overrides;
   return {
     location: new URL(href),
+    builtInClientId: null,
     completeLogin: vi.fn(async (): Promise<LoginResult> => ({ ok: true })),
     beginLogin: vi.fn(async () => {}),
     createSpotifySession: vi.fn(async () => fakeSpotifySession().session),
@@ -57,7 +58,32 @@ beforeEach(() => {
 describe('App', () => {
   it('shows Setup on a first visit', async () => {
     render(<App deps={deps()} />);
-    expect(await screen.findByRole('button', { name: 'Connect Spotify' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Continue with Spotify' })).toBeInTheDocument();
+  });
+
+  it('signs in with one click when this copy of the app has a Client ID built in', async () => {
+    const d = deps({ builtInClientId: VALID_ID });
+    render(<App deps={d} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Continue with Spotify' }));
+    expect(screen.queryByRole('textbox', { name: 'Client ID' })).toBeNull();
+    expect(d.beginLogin).toHaveBeenCalledWith(VALID_ID, ROOT);
+  });
+
+  it('restores a session that was started with the built-in Client ID', async () => {
+    localStorage.setItem('pane.tokens', JSON.stringify({ accessToken: 'a', refreshToken: 'r', expiresAt: 1 }));
+    const d = deps({ builtInClientId: VALID_ID });
+    render(<App deps={d} />);
+    expect(await screen.findByRole('heading', { name: 'Home' })).toBeInTheDocument();
+    expect(d.createSpotifySession).toHaveBeenCalledWith(VALID_ID);
+  });
+
+  it('prefers a Client ID the person entered over the built-in one', async () => {
+    const own = 'fedcba9876543210fedcba9876543210';
+    localStorage.setItem('pane.clientId', JSON.stringify(own));
+    const d = deps({ builtInClientId: VALID_ID });
+    render(<App deps={d} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Continue with Spotify' }));
+    expect(d.beginLogin).toHaveBeenCalledWith(own, ROOT);
   });
 
   it('enters the demo from Setup and leaves it again from Settings', async () => {
@@ -66,14 +92,14 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Home' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('link', { name: 'Settings' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Exit demo' }));
-    expect(await screen.findByRole('button', { name: 'Connect Spotify' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Continue with Spotify' })).toBeInTheDocument();
   });
 
   it('remembers the Client ID and starts the Spotify sign-in', async () => {
     const d = deps();
     render(<App deps={d} />);
     fireEvent.change(await screen.findByRole('textbox', { name: 'Client ID' }), { target: { value: VALID_ID } });
-    await userEvent.click(screen.getByRole('button', { name: 'Connect Spotify' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Continue with Spotify' }));
     expect(JSON.parse(localStorage.getItem('pane.clientId')!)).toBe(VALID_ID);
     expect(d.beginLogin).toHaveBeenCalledWith(VALID_ID, ROOT);
   });
@@ -103,7 +129,10 @@ describe('App', () => {
     expect(await screen.findByText(message)).toHaveAttribute('role', 'status');
     expect(d.replaceUrl).toHaveBeenCalledWith(ROOT);
     expect(d.createSpotifySession).not.toHaveBeenCalled();
-    expect(screen.getByRole('textbox', { name: 'Client ID' })).toHaveValue(VALID_ID);
+    // The Client ID is remembered, so trying again is one click.
+    expect(screen.queryByRole('textbox', { name: 'Client ID' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Continue with Spotify' }));
+    expect(d.beginLogin).toHaveBeenCalledWith(VALID_ID, ROOT);
   });
 
   it('restores a stored session straight into Home', async () => {
@@ -130,7 +159,7 @@ describe('App', () => {
     render(<App deps={deps({ createSpotifySession: vi.fn(async () => fake.session) })} />);
     await userEvent.click(await screen.findByRole('link', { name: 'Settings' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Disconnect Spotify' }));
-    expect(await screen.findByRole('button', { name: 'Connect Spotify' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Continue with Spotify' })).toBeInTheDocument();
     expect(fake.tokens.clear).toHaveBeenCalledTimes(1);
     expect(fake.dispose).toHaveBeenCalledTimes(1);
     expect(JSON.parse(localStorage.getItem('pane.clientId')!)).toBe(VALID_ID);
@@ -146,6 +175,15 @@ describe('App', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Change Client ID' }));
     expect(await screen.findByRole('textbox', { name: 'Client ID' })).toHaveValue('');
     expect(localStorage.getItem('pane.clientId')).toBeNull();
+  });
+
+  it('opens the Client ID form when changing it even though a built-in one exists', async () => {
+    localStorage.setItem('pane.tokens', JSON.stringify({ accessToken: 'a', refreshToken: 'r', expiresAt: 1 }));
+    const fake = fakeSpotifySession();
+    render(<App deps={deps({ builtInClientId: VALID_ID, createSpotifySession: vi.fn(async () => fake.session) })} />);
+    await userEvent.click(await screen.findByRole('link', { name: 'Settings' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Change Client ID' }));
+    expect(await screen.findByRole('textbox', { name: 'Client ID' })).toBeInTheDocument();
   });
 
   it("explains when the account isn't on the developer app's user list", async () => {

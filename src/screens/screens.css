@@ -737,3 +737,70 @@
   margin: 0;
   accent-color: var(--accent);
 }
+
+/* ---------- Setup: one-button sign-in ---------- */
+.setup__card[data-view='signin'] {
+  width: min(420px, 100%);
+}
+
+.setup__signin {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.setup .btn.setup__spotify {
+  height: 48px;
+  border-radius: 24px;
+  gap: 10px;
+  background: #1ed760;
+  color: #000;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.setup .btn.setup__spotify svg {
+  width: 22px;
+  height: 22px;
+}
+
+.setup .btn.setup__secondary {
+  height: 44px;
+  border-radius: 22px;
+  color: var(--text);
+}
+
+.setup__methods {
+  text-align: center;
+  font-size: var(--fs-body);
+  line-height: 18px;
+  color: var(--text-secondary);
+}
+
+.setup__link {
+  align-self: center;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: var(--fs-body);
+  color: var(--text-tertiary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.setup__link:hover {
+  color: var(--text);
+}
+
+.setup__once {
+  margin-bottom: 18px;
+  color: var(--text-secondary);
+}
+
+.setup__buttons .btn.setup__spotify,
+.setup__buttons .btn.setup__secondary {
+  flex: 1;
+  height: 46px;
+  border-radius: 23px;
+}

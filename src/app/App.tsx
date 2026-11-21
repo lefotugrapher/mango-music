@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HashRouter } from 'react-router';
+import { configuredClientId, resolveClientId } from '../auth/clientId';
 import { redirectUriFor } from '../auth/redirect';
 import { beginLogin, completeLogin, type LoginResult } from '../auth/spotifyAuth';
 import { createDemoPlayer } from '../demo/DemoPlayer';
@@ -31,6 +32,8 @@ const TOKENS_KEY = 'pane.tokens';
 /** Everything the app reaches outside itself, so tests can stand in for it. */
 export type AppDeps = {
   location: Pick<Location, 'href' | 'protocol' | 'hostname' | 'port' | 'pathname'>;
+  /** A Client ID configured into this build, if any (VITE_SPOTIFY_CLIENT_ID). */
+  builtInClientId: string | null | undefined;
   completeLogin: (url: URL) => Promise<LoginResult>;
   beginLogin: (clientId: string, redirectUri: string) => Promise<void>;
   createSpotifySession: (clientId: string) => Promise<SpotifySession>;
@@ -39,6 +42,7 @@ export type AppDeps = {
 
 const defaultDeps = (): AppDeps => ({
   location: window.location,
+  builtInClientId: configuredClientId(),
   completeLogin: (url) => completeLogin(url),
   beginLogin: (clientId, redirectUri) => beginLogin(clientId, redirectUri),
   createSpotifySession,
@@ -55,7 +59,10 @@ const storedClientId = () => {
   return typeof value === 'string' && value ? value : null;
 };
 
-type Phase = { name: 'booting' } | { name: 'setup'; notice?: string } | { name: 'ready'; session: Session };
+type Phase =
+  | { name: 'booting' }
+  | { name: 'setup'; notice?: string; editing?: boolean }
+  | { name: 'ready'; session: Session };
 
 export function App({ deps: injected }: { deps?: AppDeps }) {
   const deps = useMemo(() => injected ?? defaultDeps(), [injected]);
@@ -63,7 +70,12 @@ export function App({ deps: injected }: { deps?: AppDeps }) {
     () => new QueryClient({ defaultOptions: { queries: { staleTime: 5 * 60_000, retry: 1, refetchOnWindowFocus: false } } }),
   );
   const [phase, setPhase] = useState<Phase>({ name: 'booting' });
-  const [clientId, setClientId] = useState(storedClientId);
+  const [storedId, setStoredId] = useState(storedClientId);
+  // What signing in will use: an id the person entered, else the one built in.
+  const known = useMemo(
+    () => resolveClientId({ builtIn: deps.builtInClientId, stored: storedId }),
+    [deps.builtInClientId, storedId],
+  );
   const [nowPlayingOpen, setNowPlayingOpen] = useState(false);
   /** Detaches the signed-out listener of the live Spotify session, if any. */
   const stopListening = useRef<(() => void) | null>(null);
@@ -78,7 +90,7 @@ export function App({ deps: injected }: { deps?: AppDeps }) {
 
   /** Ends the current session, whatever kind it is, and returns to Setup. */
   const leave = useCallback(
-    (session: Session | null, reason?: NoticeReason) => {
+    (session: Session | null, reason?: NoticeReason, editing = false) => {
       stopListening.current?.();
       stopListening.current = null;
       session?.player.dispose();
@@ -86,7 +98,7 @@ export function App({ deps: injected }: { deps?: AppDeps }) {
       setNowPlayingOpen(false);
       // Start the next session at Home rather than wherever this one ended.
       if (window.location.hash && window.location.hash !== '#/') window.location.hash = '#/';
-      setPhase({ name: 'setup', notice: reason ? noticeFor(reason) : undefined });
+      setPhase({ name: 'setup', notice: reason ? noticeFor(reason) : undefined, editing });
     },
     [queryClient],
   );
@@ -131,7 +143,7 @@ export function App({ deps: injected }: { deps?: AppDeps }) {
     if (booted.current) return;
     booted.current = true;
     const url = new URL(deps.location.href);
-    const id = storedClientId();
+    const id = resolveClientId({ builtIn: deps.builtInClientId, stored: storedClientId() })?.id ?? null;
     const action = decideBoot({ url, clientId: id, hasTokens: readJSON<unknown>(TOKENS_KEY, null) !== null });
 
     void (async () => {
@@ -153,8 +165,12 @@ export function App({ deps: injected }: { deps?: AppDeps }) {
 
   const connect = useCallback(
     (id: string) => {
-      writeJSON(CLIENT_ID_KEY, id);
-      setClientId(id);
+      // Remember an id the person typed. The built-in one needs no remembering,
+      // and storing it would pin this browser to it across future builds.
+      if (id !== resolveClientId({ builtIn: deps.builtInClientId, stored: null })?.id) {
+        writeJSON(CLIENT_ID_KEY, id);
+        setStoredId(id);
+      }
       void deps.beginLogin(id, redirectUriFor(deps.location).uri);
     },
     [deps],
@@ -162,20 +178,24 @@ export function App({ deps: injected }: { deps?: AppDeps }) {
 
   const session = phase.name === 'ready' ? phase.session : null;
 
-  const disconnect = useCallback(() => {
-    if (!session) return;
-    // Detach first: clearing tokens notifies listeners, and a deliberate
-    // disconnect should not be reported as "Spotify signed you out".
-    stopListening.current?.();
-    stopListening.current = null;
-    if (session.mode === 'spotify') (session as SpotifySession).tokens.clear();
-    leave(session);
-  }, [leave, session]);
+  const disconnect = useCallback(
+    (editing = false) => {
+      if (!session) return;
+      // Detach first: clearing tokens notifies listeners, and a deliberate
+      // disconnect should not be reported as "Spotify signed you out".
+      stopListening.current?.();
+      stopListening.current = null;
+      if (session.mode === 'spotify') (session as SpotifySession).tokens.clear();
+      leave(session, undefined, editing);
+    },
+    [leave, session],
+  );
 
   const changeClientId = useCallback(() => {
     removeKey(CLIENT_ID_KEY);
-    setClientId(null);
-    disconnect();
+    setStoredId(null);
+    // Open Setup on the Client ID form, even when a built-in id exists.
+    disconnect(true);
   }, [disconnect]);
 
   const openNowPlaying = useCallback(() => setNowPlayingOpen(true), []);
@@ -192,7 +212,8 @@ export function App({ deps: injected }: { deps?: AppDeps }) {
         {phase.name === 'setup' && (
           <Setup
             notice={phase.notice}
-            defaultClientId={clientId ?? ''}
+            clientId={known?.id ?? null}
+            editing={phase.editing}
             location={deps.location}
             onConnect={connect}
             onDemo={() => setPhase({ name: 'ready', session: createDemoSession() })}
@@ -207,7 +228,7 @@ export function App({ deps: injected }: { deps?: AppDeps }) {
               >
                 <AppRoutes
                   settings={
-                    <Settings mode={session.mode} onDisconnect={disconnect} onChangeClientId={changeClientId} />
+                    <Settings mode={session.mode} onDisconnect={() => disconnect()} onChangeClientId={changeClientId} />
                   }
                 />
               </AppShell>
