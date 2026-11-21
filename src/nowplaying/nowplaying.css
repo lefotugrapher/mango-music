@@ -71,7 +71,7 @@
   overflow: hidden;
 }
 
-.playerbar__lcd:disabled {
+.playerbar__lcd:has(.playerbar__idle) {
   color: var(--text-tertiary);
 }
 

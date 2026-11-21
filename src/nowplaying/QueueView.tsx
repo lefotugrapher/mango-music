@@ -4,6 +4,12 @@ import { TrackRow } from '../ui/TrackRow';
 export function QueueView() {
   const player = usePlayer();
   const { queue } = usePlayerState();
+
+  // Skipping forward keeps the album or playlist that is playing. Starting a
+  // new play request with just these tracks would discard it.
+  const skipTo = async (index: number) => {
+    for (let step = 0; step <= index; step++) await player.next();
+  };
   return (
     <section className="np__panel" aria-label="Queue">
       <h3 className="np__panel-title">Up Next</h3>
@@ -16,8 +22,7 @@ export function QueueView() {
               <TrackRow
                 track={track}
                 showArtwork
-                // Jumps ahead: plays this track and keeps what was queued after it.
-                onPlay={() => void player.play({ uris: queue.slice(i).map((t) => t.uri) })}
+                onPlay={() => void skipTo(i)}
               />
             </li>
           ))}

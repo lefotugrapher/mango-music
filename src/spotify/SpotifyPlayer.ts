@@ -6,6 +6,7 @@ import type { SdkEventMap, SpotifyNamespace } from './sdk';
 
 const DEVICE_NAME = 'Pane';
 const POLL_MS = 5000;
+const REMOTE_VOLUME_DELAY_MS = 300;
 
 const MESSAGES = {
   premium_required: 'Playback needs Spotify Premium. You can still browse.',
@@ -49,6 +50,7 @@ export function createSpotifyPlayer(deps: {
   let activated = false;
   let timer: unknown;
   let pollGen = 0;
+  let volumeTimer: ReturnType<typeof setTimeout> | undefined;
 
   let state: PlayerState = {
     status: 'loading', track: null, positionMs: 0, at: now(), shuffle: false, repeat: 'off',
@@ -181,7 +183,12 @@ export function createSpotifyPlayer(deps: {
   on('autoplay_failed', () =>
     setError({ kind: 'playback', message: 'Your browser blocked autoplay. Press play to start.' }),
   );
-  on('initialization_error', () => setError({ kind: 'unsupported_browser', message: MESSAGES.unsupported_browser }));
+  on('initialization_error', () => {
+    setError({ kind: 'unsupported_browser', message: MESSAGES.unsupported_browser });
+    // This browser will never be a playback device, but it can still follow
+    // and control whatever is playing on another one.
+    startPolling();
+  });
   on('account_error', () => setError({ kind: 'premium_required', message: MESSAGES.premium_required }));
   on('authentication_error', () => setError({ kind: 'auth', message: MESSAGES.auth }));
   on('playback_error', ({ message }) => setError({ kind: 'playback', message }));
@@ -244,11 +251,20 @@ export function createSpotifyPlayer(deps: {
       cmd(async () => {
         const volume = Math.min(Math.max(v, 0), 1);
         commit({ volume });
-        if (remoteActive) {
-          await client.put('/me/player/volume', undefined, { volume_percent: Math.round(volume * 100) });
-        } else {
+        if (!remoteActive) {
           await sdkPlayer.setVolume(volume);
+          return;
         }
+        // Dragging a slider produces a stream of values. A remote device only
+        // needs the last one, and one request per movement would trip
+        // Spotify's rate limit and stall everything queued behind it.
+        if (volumeTimer !== undefined) clearTimeout(volumeTimer);
+        volumeTimer = setTimeout(() => {
+          volumeTimer = undefined;
+          void cmd(() =>
+            client.put('/me/player/volume', undefined, { volume_percent: Math.round(state.volume * 100) }),
+          );
+        }, REMOTE_VOLUME_DELAY_MS);
       }),
 
     setShuffle: (on) =>
@@ -281,6 +297,8 @@ export function createSpotifyPlayer(deps: {
       if (disposed) return;
       disposed = true;
       stopPolling();
+      if (volumeTimer !== undefined) clearTimeout(volumeTimer);
+      volumeTimer = undefined;
       offs.forEach((off) => off());
       offs.length = 0;
       try {

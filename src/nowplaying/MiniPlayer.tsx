@@ -14,8 +14,9 @@ export function MiniPlayer({ onExpand }: { onExpand: () => void }) {
       <button
         type="button"
         className="mini__body"
+        // Stays usable with nothing playing: Now Playing holds the device
+        // picker, the only way to take over playback from another device.
         aria-label={track ? `Open Now Playing: ${track.name}` : 'Open Now Playing'}
-        disabled={!track}
         onClick={onExpand}
       >
         <Artwork image={track?.album.images[0]} alt="" size={36} radius={6} />

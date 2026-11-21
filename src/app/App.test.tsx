@@ -167,6 +167,18 @@ describe('App', () => {
     expect(screen.queryByRole('status')).toBeNull();
   });
 
+  it("clears the previous account's cached shelf on the way out", async () => {
+    remember();
+    localStorage.setItem('pane.cache.newFromArtists', JSON.stringify({ at: Date.now(), items: [] }));
+    const fake = fakeSpotifySession();
+    render(<App deps={deps({ createSpotifySession: vi.fn(async () => fake.session) })} />);
+    await userEvent.click(await screen.findByRole('link', { name: 'Settings' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Disconnect Spotify' }));
+    await screen.findByRole('button', { name: 'Continue with Spotify' });
+    // Otherwise the next person to connect would see this account's shelf.
+    expect(localStorage.getItem('pane.cache.newFromArtists')).toBeNull();
+  });
+
   it('forgets the Client ID when asked to change it', async () => {
     remember();
     const fake = fakeSpotifySession();

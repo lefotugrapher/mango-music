@@ -61,6 +61,9 @@ export function createSpotifyClient(deps: {
       }
 
       if (res.ok) {
+        // Only reads return data. A write's body is never used, and Spotify
+        // sometimes answers a player command with a non-JSON one.
+        if (method !== 'GET') return undefined;
         const text = await res.text();
         if (text === '') return undefined;
         try {

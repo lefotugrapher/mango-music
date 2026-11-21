@@ -284,3 +284,50 @@ describe('createTokenStore', () => {
     expect(cb).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('createTokenStore when another tab signs out', () => {
+  const live = () => {
+    seedTokens({ accessToken: 'A', refreshToken: 'R', expiresAt: NOW + 3_600_000 });
+    const store = createTokenStore({ clientId: 'cid', now, locks: null, fetch: vi.fn() as unknown as typeof fetch });
+    const signedOut = vi.fn();
+    const unsubscribe = store.onSignedOut(signedOut);
+    return { store, signedOut, unsubscribe };
+  };
+  const removedElsewhere = (key: string | null = 'pane.tokens') => {
+    localStorage.removeItem('pane.tokens');
+    window.dispatchEvent(new StorageEvent('storage', { key, newValue: null }));
+  };
+
+  it('signals sign-out when a request finds the tokens gone', async () => {
+    const { store, signedOut } = live();
+    localStorage.removeItem('pane.tokens');
+    await expect(store.getAccessToken()).rejects.toBeInstanceOf(AuthError);
+    expect(signedOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('signals sign-out as soon as the other tab removes the tokens', () => {
+    const { signedOut } = live();
+    removedElsewhere();
+    expect(signedOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats the whole storage being cleared the same way', () => {
+    const { signedOut } = live();
+    removedElsewhere(null);
+    expect(signedOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores changes to other keys and to tokens that were only replaced', () => {
+    const { signedOut } = live();
+    window.dispatchEvent(new StorageEvent('storage', { key: 'pane.settings', newValue: null }));
+    window.dispatchEvent(new StorageEvent('storage', { key: 'pane.tokens', newValue: '{"accessToken":"B"}' }));
+    expect(signedOut).not.toHaveBeenCalled();
+  });
+
+  it('stops watching once nobody is listening', () => {
+    const { signedOut, unsubscribe } = live();
+    unsubscribe();
+    removedElsewhere();
+    expect(signedOut).not.toHaveBeenCalled();
+  });
+});

@@ -15,7 +15,7 @@ Pane is a static web app. There is no server and nothing to sign up for: you con
 ## What you need
 
 - **Spotify Premium.** Spotify only allows in-browser playback for Premium accounts. Without it you can browse but not play.
-- **Node.js 22 or newer** to run it locally.
+- **Node.js 22.22.2 or newer** to run it locally (24.15+ and 26+ also work).
 - **A Chromium browser** (Chrome, Edge, Arc, Brave, Comet) for the full glass effect, where the glass bends what is behind it. Safari and Firefox get frosted glass instead.
 
 ## Try it without Spotify
@@ -31,19 +31,29 @@ Open **http://127.0.0.1:5173/** and choose **Look around first**. That loads a m
 
 Use `127.0.0.1`, not `localhost`. Spotify refuses `localhost` as a redirect address, and Pane will tell you if you opened the wrong one.
 
-## Connect your Spotify
+## Signing in
 
-Spotify limits a developer app in development mode to five named users, so Pane does not ship a shared app. Each person makes their own, which takes about two minutes and is free.
+![Sign in](docs/screenshots/sign-in.png)
+
+Signing in is one button, **Continue with Spotify**. It opens Spotify's own sign-in page, where you can use your email and password, Google, Apple or Facebook, and Spotify sends you back signed in. Pane never sees or stores your password, and it cannot offer its own password, Google or Apple sign-in: Spotify only signs people in to third-party apps on its own page.
+
+### The one-time step
+
+Spotify requires every app that plays its music to be registered, and limits an app in development mode to five named users. So Pane does not ship a shared registration; you make your own once. It is free and takes about two minutes.
 
 1. Open the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and choose **Create app**. Any name and description will do.
 2. Under **Redirect URIs**, add the address Pane shows on its setup screen. Running locally, that is `http://127.0.0.1:5173/`.
 3. Tick **Web API** and **Web Playback SDK**, then save.
 4. Open the app's settings and copy the **Client ID**.
-5. Paste the Client ID into Pane and choose **Connect Spotify**.
 
-You never need the Client Secret. Do not paste it anywhere.
+Then give Pane the Client ID in either of two ways:
 
-To let a friend use your developer app instead of making their own, add their Spotify account under **User Management** in the dashboard (up to five people).
+- **Paste it on the first-run screen.** This browser remembers it, and from then on you only see the sign-in button.
+- **Put it in the build.** Copy `.env.example` to `.env.local` and set `VITE_SPOTIFY_CLIENT_ID`. Pane then opens straight on the sign-in button for everyone using that copy, with no setup screen at all. `.env.local` is ignored by git.
+
+A Client ID is a public identifier, not a secret. You never need the Client Secret; do not paste it anywhere.
+
+To let friends use your copy, add their Spotify accounts under **User Management** in the dashboard (up to five people). Anyone beyond that needs their own Client ID, which they can enter with **Use a different Client ID** on the sign-in screen.
 
 ## What it does
 
@@ -88,7 +98,7 @@ Dependencies are installed with install scripts disabled (see `.npmrc`).
 
 Using Pane with your Spotify account means your developer app is bound by the [Spotify Developer Terms](https://developer.spotify.com/terms) and [Developer Policy](https://developer.spotify.com/policy). Pane is for personal, non-commercial use. Spotify's policy restricts apps that replace its own client; whether to run one against your account is your call.
 
-Pane contains no Apple or Spotify code, fonts, icons or artwork. Music, artwork and metadata shown while connected belong to Spotify and its licensors.
+Pane contains no Apple code, fonts, icons or artwork, and no Spotify code or artwork. The Spotify mark shown beside "Open in Spotify" and on the sign-in button comes from the open-source Phosphor icon set. Music, artwork and metadata shown while connected belong to Spotify and its licensors.
 
 ## Licence
 

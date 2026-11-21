@@ -240,6 +240,18 @@ and artist pages.
 - A yes before anything is pushed to GitHub.
 - Optional: open the two Figma kits into his drafts and share the links.
 
+## Changes since approval (2026-11-21)
+
+- **Sign-in is one button.** Kayzee asked for a normal sign-in instead of a
+  Client ID form. Pane cannot take Spotify passwords or run its own Google or
+  Apple sign-in, so the screen is now "Continue with Spotify", which opens
+  Spotify's page (email and password, Google, Apple, Facebook). The Client ID
+  form only appears when no Client ID is known.
+- **A Client ID can be built in.** `VITE_SPOTIFY_CLIENT_ID` in `.env.local`
+  (git-ignored) skips the setup step for everyone using that copy. The repo
+  still ships no Client ID, so the anti-goal holds; a copy configured this way
+  is limited to five allowlisted accounts.
+
 ## Left to the builder
 
 Icon set, component breakdown, animation curves, cache storage, test tooling,

@@ -19,20 +19,30 @@ export function Slider({ value, max, label, step = 1, formatValue, onChange, onC
   // value rather than the prop, so the thumb does not snap back before the
   // owner has caught up (a seek is asynchronous).
   const [held, setHeld] = useState<number | null>(null);
+  // The ref answers "is a drag in progress?" inside event handlers; the state
+  // copy re-runs the effects below when a drag ends.
   const dragging = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
   const latest = useRef(value);
   const disabled = !(max > 0);
   const shown = disabled ? 0 : Math.min(max, Math.max(0, held ?? value));
 
+  // Let go of the held value once the owner reports roughly the same thing.
+  // "Roughly", because a playback position keeps ticking: the old position
+  // must not release the hold, the new one must.
   useEffect(() => {
-    if (!dragging.current) setHeld(null);
-  }, [value]);
+    if (isDragging || held == null) return;
+    // Within 2% of the range, but always less than one key step, so a single
+    // arrow press is not mistaken for "the owner already agrees".
+    if (Math.abs(value - held) <= Math.min(step, max * 0.02)) setHeld(null);
+  }, [value, held, isDragging, step, max]);
 
+  // And never hold for long: if the owner ignores the change, show the truth.
   useEffect(() => {
-    if (held == null || dragging.current) return;
+    if (held == null || isDragging) return;
     const timer = setTimeout(() => setHeld(null), 1000);
     return () => clearTimeout(timer);
-  }, [held]);
+  }, [held, isDragging]);
 
   const clamp = (v: number) => Math.min(max, Math.max(0, v));
 
@@ -50,6 +60,7 @@ export function Slider({ value, max, label, step = 1, formatValue, onChange, onC
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (disabled) return;
     dragging.current = true;
+    setIsDragging(true);
     e.currentTarget.setPointerCapture?.(e.pointerId);
     move(fromPointer(e));
   };
@@ -61,6 +72,7 @@ export function Slider({ value, max, label, step = 1, formatValue, onChange, onC
   const endDrag = (e: PointerEvent<HTMLDivElement>) => {
     if (!dragging.current) return;
     dragging.current = false;
+    setIsDragging(false);
     e.currentTarget.releasePointerCapture?.(e.pointerId);
     onCommit?.(latest.current);
   };
@@ -101,7 +113,7 @@ export function Slider({ value, max, label, step = 1, formatValue, onChange, onC
       aria-valuenow={shown}
       aria-valuetext={formatValue ? formatValue(shown) : undefined}
       aria-disabled={disabled || undefined}
-      data-dragging={dragging.current || undefined}
+      data-dragging={isDragging || undefined}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}

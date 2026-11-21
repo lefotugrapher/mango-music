@@ -50,6 +50,28 @@ beforeEach(() => {
   storage = window.localStorage;
 });
 
+describe('home() when Spotify cannot be reached', () => {
+  const fail = () => {
+    throw new SpotifyError(0, 'network');
+  };
+
+  it('rejects when every core request fails, so Home can offer a retry instead of looking empty', async () => {
+    const { client } = fakeClient({
+      '/me/player/recently-played': fail,
+      '/me/top/tracks': fail,
+      '/me/top/artists': fail,
+      '/me/playlists': fail,
+      '/me/following': fail,
+    });
+    await expect(createSpotifySource({ client, storage }).home()).rejects.toMatchObject({ reason: 'network' });
+  });
+
+  it('still resolves when only some requests fail', async () => {
+    const { client } = fakeClient({ ...homeBase(), '/me/player/recently-played': fail, '/me/top/tracks': fail });
+    await expect(createSpotifySource({ client, storage }).home()).resolves.toEqual([]);
+  });
+});
+
 describe('home()', () => {
   it('resolves with only non-empty shelves when one shelf is forbidden and the rest are empty', async () => {
     const { client } = fakeClient({
@@ -64,9 +86,11 @@ describe('home()', () => {
     expect(shelves[0]).toMatchObject({ title: 'Your Playlists', items: [{ kind: 'playlist', subtitle: 'Kay' }] });
   });
 
-  it('resolves to [] when every shelf request fails', async () => {
+  it('rejects rather than looking empty when every shelf request fails', async () => {
+    // An account with nothing in it answers with empty lists, not errors. Every
+    // request failing means Spotify could not be reached, and Home must say so.
     const { client } = fakeClient({});
-    expect(await createSpotifySource({ client, storage }).home()).toEqual([]);
+    await expect(createSpotifySource({ client, storage }).home()).rejects.toBeInstanceOf(SpotifyError);
   });
 
   it('de-duplicates recently played by album, most recent first, skipping dirty items', async () => {

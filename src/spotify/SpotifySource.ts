@@ -333,6 +333,12 @@ export function createSpotifySource(deps: { client: SpotifyClient; now?: () => n
       };
       const ids = Object.keys(SHELVES) as ShelfId[];
       const settled = await Promise.allSettled(ids.map((id) => loaders[id]()));
+      // One failing shelf is left out quietly. But when the three independent
+      // basics all fail, Spotify is unreachable (offline, rate-limited, signed
+      // out) and "nothing here yet" would be a lie: reject so Home can say so.
+      const core: ShelfId[] = ['recent', 'top-picks', 'playlists'];
+      const failures = core.map((id) => settled[ids.indexOf(id)]).filter((r) => r?.status === 'rejected');
+      if (failures.length === core.length) throw (failures[0] as PromiseRejectedResult).reason;
       return ids.flatMap((id, i) => {
         const r = settled[i];
         return r?.status === 'fulfilled' && r.value.length > 0 ? [{ id, title: SHELVES[id], items: r.value }] : [];

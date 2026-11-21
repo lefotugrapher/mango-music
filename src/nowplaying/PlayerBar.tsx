@@ -26,7 +26,6 @@ export function PlayerBar({ onExpand }: { onExpand: () => void }) {
         type="button"
         className="playerbar__lcd"
         aria-label={track ? `Open Now Playing: ${track.name}` : 'Open Now Playing'}
-        disabled={!track}
         onClick={onExpand}
       >
         {track ? (

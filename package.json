@@ -5,6 +5,9 @@
   "description": "A Liquid Glass web player for your own Spotify account. Unofficial.",
   "type": "module",
   "license": "MIT",
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

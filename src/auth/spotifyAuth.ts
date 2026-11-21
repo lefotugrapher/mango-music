@@ -201,6 +201,14 @@ export function createTokenStore(deps: {
     notifySignedOut();
   }
 
+  // Another tab signing out removes the tokens from shared storage. Hearing
+  // about it here lets this tab return to Setup at once, instead of every
+  // screen failing its next request.
+  function onStorage(e: StorageEvent) {
+    const removed = e.key === TOKENS_KEY ? e.newValue === null : e.key === null && get() === null;
+    if (removed) notifySignedOut();
+  }
+
   /**
    * `failedToken` is the access token the caller saw fail. When storage holds a
    * different one, another caller or tab already refreshed and we reuse it.
@@ -208,7 +216,12 @@ export function createTokenStore(deps: {
   function refresh(failedToken: string | null): Promise<string> {
     return withLock(async () => {
       const current = get();
-      if (!current) throw new AuthError('Not signed in');
+      if (!current) {
+        // The tokens were there when this session started, so something
+        // removed them: another tab disconnected, or site data was cleared.
+        notifySignedOut();
+        throw new AuthError('Not signed in');
+      }
       if (failedToken === null) {
         if (current.expiresAt - now() > FRESH_MS) return current.accessToken;
       } else if (current.accessToken !== failedToken) {
@@ -272,8 +285,10 @@ export function createTokenStore(deps: {
     clear,
     onSignedOut(cb) {
       listeners.add(cb);
+      if (listeners.size === 1 && typeof window !== 'undefined') window.addEventListener('storage', onStorage);
       return () => {
         listeners.delete(cb);
+        if (listeners.size === 0 && typeof window !== 'undefined') window.removeEventListener('storage', onStorage);
       };
     },
   };

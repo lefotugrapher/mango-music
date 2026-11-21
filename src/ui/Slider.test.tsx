@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { Slider } from './Slider';
 
 function setup(props: Partial<Parameters<typeof Slider>[0]> = {}) {
@@ -70,6 +70,45 @@ describe('Slider', () => {
     const { slider, onChange } = setup();
     fireEvent.pointerMove(slider, { clientX: 100, pointerId: 1 });
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('keeps showing where the user let go until the owner catches up', () => {
+    // A seek is asynchronous: for a moment the owner still reports the old,
+    // slowly advancing position. The thumb must not jump back to it.
+    const { rerender } = render(<Slider value={10} max={100} label="Seek" />);
+    const slider = screen.getByRole('slider', { name: 'Seek' });
+    vi.spyOn(slider, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 0, width: 200, height: 20, right: 200, bottom: 20, x: 0, y: 0, toJSON: () => ({}),
+    });
+    fireEvent.pointerDown(slider, { clientX: 120, pointerId: 1 });
+    fireEvent.pointerUp(slider, { clientX: 120, pointerId: 1 });
+    expect(slider).toHaveAttribute('aria-valuenow', '60');
+
+    rerender(<Slider value={10.25} max={100} label="Seek" />);
+    expect(slider).toHaveAttribute('aria-valuenow', '60');
+
+    rerender(<Slider value={60.5} max={100} label="Seek" />);
+    expect(slider).toHaveAttribute('aria-valuenow', '60.5');
+  });
+
+  it('gives up waiting after a second if the owner never catches up', () => {
+    vi.useFakeTimers();
+    try {
+      render(<Slider value={10} max={100} label="Seek" />);
+      const slider = screen.getByRole('slider', { name: 'Seek' });
+      vi.spyOn(slider, 'getBoundingClientRect').mockReturnValue({
+        left: 0, top: 0, width: 200, height: 20, right: 200, bottom: 20, x: 0, y: 0, toJSON: () => ({}),
+      });
+      fireEvent.pointerDown(slider, { clientX: 120, pointerId: 1 });
+      fireEvent.pointerUp(slider, { clientX: 120, pointerId: 1 });
+      expect(slider).toHaveAttribute('aria-valuenow', '60');
+      act(() => {
+        vi.advanceTimersByTime(1100);
+      });
+      expect(slider).toHaveAttribute('aria-valuenow', '10');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('is disabled when there is nothing to scrub', () => {

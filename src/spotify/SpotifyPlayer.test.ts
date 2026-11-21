@@ -461,3 +461,54 @@ describe('dispose', () => {
     expect(fn).not.toHaveBeenCalled();
   });
 });
+
+describe('following and controlling another device', () => {
+  const remote = {
+    device: { id: 'phone', volume_percent: 40 },
+    is_playing: true,
+    progress_ms: 0,
+    item: { id: 'r', uri: 'spotify:track:r', name: 'R', type: 'track', duration_ms: 1000 },
+  };
+  const polls = () => t.calls.filter((c) => c.method === 'get' && c.path === '/me/player').length;
+
+  it('follows playback elsewhere when this browser cannot initialise the player', async () => {
+    t = setup({ 'get /me/player': remote });
+    p = t.player;
+    await t.emit('initialization_error', { message: 'EME unavailable' });
+    expect(p.getState().error?.kind).toBe('unsupported_browser');
+    expect(polls()).toBe(0);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(polls()).toBe(1);
+    expect(p.getState().track?.id).toBe('r');
+    // The reason stays on show while the other device is followed.
+    expect(p.getState().error?.kind).toBe('unsupported_browser');
+  });
+
+  it('sends one volume request for a whole drag on a remote device', async () => {
+    t = setup({ 'get /me/player': remote });
+    p = t.player;
+    await t.emit('player_state_changed', null);
+    await vi.advanceTimersByTimeAsync(5000);
+    for (const v of [0.1, 0.2, 0.3, 0.4, 0.5]) void p.setVolume(v);
+    await t.flush();
+    // The slider follows the finger at once...
+    expect(p.getState().volume).toBe(0.5);
+    // ...but Spotify hears about it once, after the movement settles.
+    expect(putCalls('/me/player/volume')).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(300);
+    expect(putCalls('/me/player/volume')).toHaveLength(1);
+    expect(putCalls('/me/player/volume')[0]?.params).toMatchObject({ volume_percent: 50 });
+  });
+
+  it('drops a pending remote volume change when disposed', async () => {
+    t = setup({ 'get /me/player': remote });
+    p = t.player;
+    await t.emit('player_state_changed', null);
+    await vi.advanceTimersByTimeAsync(5000);
+    void p.setVolume(0.9);
+    await t.flush();
+    p.dispose();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(putCalls('/me/player/volume')).toHaveLength(0);
+  });
+});

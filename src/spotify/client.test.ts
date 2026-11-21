@@ -199,4 +199,12 @@ describe('createSpotifyClient', () => {
     const { client } = setup([res(200, '<html>')]);
     await expect(client.get('/a')).rejects.toMatchObject({ status: 200 });
   });
+
+  it('ignores the body of a successful write, whatever it contains', async () => {
+    // Spotify's player endpoints sometimes answer a command with a non-JSON body.
+    const { client } = setup([res(200, 'OK'), res(202, '<html>accepted</html>'), res(200, '{broken')]);
+    await expect(client.put('/me/player/play')).resolves.toBeUndefined();
+    await expect(client.post('/me/player/next')).resolves.toBeUndefined();
+    await expect(client.del('/me/library')).resolves.toBeUndefined();
+  });
 });

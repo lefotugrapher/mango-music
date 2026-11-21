@@ -28,6 +28,8 @@ import { AppRoutes } from './routes';
 
 const CLIENT_ID_KEY = 'pane.clientId';
 const TOKENS_KEY = 'pane.tokens';
+/** Per-account data the Spotify source keeps between visits. */
+const ACCOUNT_CACHE_KEYS = ['pane.cache.newFromArtists'];
 
 /** Everything the app reaches outside itself, so tests can stand in for it. */
 export type AppDeps = {
@@ -95,6 +97,8 @@ export function App({ deps: injected }: { deps?: AppDeps }) {
       stopListening.current = null;
       session?.player.dispose();
       queryClient.clear();
+      // Whoever connects next must not be shown this account's data.
+      for (const key of ACCOUNT_CACHE_KEYS) removeKey(key);
       setNowPlayingOpen(false);
       // Start the next session at Home rather than wherever this one ended.
       if (window.location.hash && window.location.hash !== '#/') window.location.hash = '#/';
